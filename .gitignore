@@ -1,0 +1,14 @@
+.venv/
+.env
+.chunks/
+.idea/
+.transcribe-status.json
+__pycache__/
+*.pyc
+.DS_Store
+
+# крупные артефакты пайплайна (раскомментируйте при необходимости)
+source-mp3/
+raw/
+clean/
+summary/
