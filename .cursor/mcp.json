@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+      "args": [
+        "-m",
+        "code_review_graph",
+        "serve"
+      ],
+      "cwd": "/Users/alex/Documents/Zerocoder/CLAUDE-CODE/transcribator",
+      "type": "stdio"
+    }
+  }
+}
