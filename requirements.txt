@@ -1,2 +1,4 @@
 faster-whisper
 python-dotenv
+flask
+markdown

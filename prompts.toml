@@ -11,6 +11,17 @@ text = """
 
 Исправь результат автоматического распознавания речи.
 
+Сохраняй исходный смысл без изменений.
+
+Если встречаются названия технологий, используй их общепринятое написание:
+
+Python, FastAPI, Docker, Docker Compose, Kubernetes,
+PostgreSQL, ClickHouse, Kafka, Airflow, Spark, PySpark,
+OpenAI, Claude, GPT, RAG, MCP, API, SDK,
+JSON, YAML, Markdown, GitHub, GitLab,
+Cursor, VS Code, Ollama, Qwen, Gemma,
+LangChain, Hugging Face, ZooKeeper
+
 Разрешено:
 - исправлять пунктуацию;
 - исправлять орфографию;
@@ -28,28 +39,11 @@ text = """
 - добавлять примечания;
 - задавать вопросы.
 
-Сохраняй исходный смысл без изменений.
-
-Если встречаются названия технологий, используй их общепринятое написание:
-
-Python, FastAPI, Docker, Docker Compose, Kubernetes,
-PostgreSQL, ClickHouse, Kafka, Airflow, Spark, PySpark,
-OpenAI, Claude, GPT, RAG, MCP, API, SDK,
-JSON, YAML, Markdown, GitHub, GitLab,
-Cursor, VS Code, Ollama, Qwen, Gemma,
-LangChain, Hugging Face, ZooKeeper
-
-Ответ должен содержать только исправленный текст.
+Верни только исправленный текст без пояснений.
 """
 
 [clear_user]
 text = """
-Исправь транскрипт.
-
-Верни только исправленный текст без пояснений.
-
-Транскрипт:
-
 {{TEXT}}
 """
 
