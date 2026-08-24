@@ -6,6 +6,8 @@
 а очистка и суммаризация — через локальные LLM в [Ollama](https://ollama.com).
 Никакие аудио или тексты не покидают машину.
 
+![Результат транскрибации](images/transcribator_result.png)
+
 ---
 
 ## Что это решает
@@ -27,6 +29,8 @@ clean/.../Лекция.txt            ← пунктуация, абзацы, у
         ↓  Ollama (gemma4:e2b-32k)
 summary/.../Лекция.md           ← структурированное саммари в Markdown
 ```
+
+![Процесс работы](images/transcribator_process.png)
 
 ## Для кого
 
