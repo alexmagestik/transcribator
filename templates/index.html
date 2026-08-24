@@ -55,6 +55,8 @@
   @keyframes pulse { 50% { opacity: 0.3; } }
   .header-paths { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--fg-dim); }
   .header-paths code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; }
+  .header-models { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
+  .header-models code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; }
   .header-spacer { flex: 1; }
   button {
     font: inherit; cursor: pointer; padding: 5px 12px;
@@ -180,6 +182,7 @@
   <h1>Transcribator</h1>
   <span id="status-pill" class="status-pill"><span class="dot"></span><span class="text">простаивает</span></span>
   <div class="header-paths" id="header-paths"></div>
+  <div class="header-models" id="header-models"></div>
   <div class="header-spacer"></div>
   <button id="btn-toggle-logs">Логи</button>
   <button id="btn-refresh" title="Перечитать дерево">↻</button>
@@ -275,6 +278,18 @@ async function loadConfig() {
     const span = document.createElement('span');
     span.innerHTML = `${label} <code>${state.config[key]}</code>`;
     paths.appendChild(span);
+  }
+  const models = $('#header-models');
+  models.innerHTML = '';
+  for (const [label, key] of [
+    ['whisper', 'whisper_model'],
+    ['ollama clean', 'ollama_clean_model'],
+    ['ollama summary', 'ollama_summary_model'],
+    ['ollama host', 'ollama_host'],
+  ]) {
+    const span = document.createElement('span');
+    span.innerHTML = `${label} <code>${state.config[key]}</code>`;
+    models.appendChild(span);
   }
 }
 
