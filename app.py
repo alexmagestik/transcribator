@@ -116,6 +116,12 @@ def _build_tree() -> dict[str, Any]:
             entries = sorted(d.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
         except OSError:
             return node
+
+        # Проверяем наличие общего саммари для этой папки
+        # Путь: summary/<имя_папки>.md
+        summary_file = _settings.summary_dir / f"{d.name}.md"
+        node["has_summary"] = summary_file.exists()
+
         for entry in entries:
             if entry.name.startswith("."):
                 continue
@@ -166,16 +172,22 @@ def _reader_thread(proc: subprocess.Popen) -> None:
                 line = raw_line.decode("utf-8", errors="replace").rstrip("\n")
             except Exception:
                 continue
+            now = time.strftime("%H:%M:%S")
             with _state_lock:
                 _current["log_seq"] += 1
-                _current["log_buffer"].append((_current["log_seq"], line))
+                _current["log_buffer"].append((_current["log_seq"], line, now))
                 _current["log_event"].set()
                 _current["log_event"].clear()
     except Exception as exc:  # noqa: BLE001
         log.warning("reader thread error: %s", exc)
     finally:
         proc.wait()
+        duration = time.time() - _current["started_at"]
+        duration_str = f"Общее время выполнения: {duration:.2f} с"
+        now = time.strftime("%H:%M:%S")
         with _state_lock:
+            _current["log_seq"] += 1
+            _current["log_buffer"].append((_current["log_seq"], duration_str, now))
             _current["exit_code"] = proc.returncode
         _current["done_event"].set()
 
@@ -307,17 +319,18 @@ def api_logs_stream() -> Response:
         # Сначала отдаём то, что уже накопилось
         with _state_lock:
             buf = list(_current["log_buffer"])
-        for seq, line in buf:
-            yield _sse_format("log", json.dumps({"seq": seq, "line": line}, ensure_ascii=False))
+        for seq, line, ts in buf:
+            yield _sse_format("log", json.dumps({"seq": seq, "line": f"[{ts}] {line}"}, ensure_ascii=False))
             last_seq = seq
+
 
         while True:
             with _state_lock:
                 done = _current["done_event"].is_set()
                 buf = list(_current["log_buffer"])
-            for seq, line in buf:
+            for seq, line, ts in buf:
                 if seq > last_seq:
-                    yield _sse_format("log", json.dumps({"seq": seq, "line": line}, ensure_ascii=False))
+                    yield _sse_format("log", json.dumps({"seq": seq, "line": f"[{ts}] {line}"}, ensure_ascii=False))
                     last_seq = seq
             if done:
                 with _state_lock:
@@ -336,9 +349,9 @@ def api_logs_stream() -> Response:
 def api_logs() -> Response:
     since = int(request.args.get("since", 0))
     with _state_lock:
-        buf = [(s, l) for s, l in _current["log_buffer"] if s > since]
+        buf = [(s, l, t) for s, l, t in _current["log_buffer"] if s > since]
         exit_code = _current["exit_code"]
-    return jsonify({"lines": [{"seq": s, "line": l} for s, l in buf],
+    return jsonify({"lines": [{"seq": s, "line": f"[{t}] {l}"} for s, l, t in buf],
                     "exit_code": exit_code,
                     "log_seq": _current["log_seq"]})
 

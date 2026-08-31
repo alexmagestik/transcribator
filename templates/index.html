@@ -412,6 +412,15 @@ function renderNode(node, isRoot) {
       row.appendChild(empty);
     }
 
+    if (node.has_summary !== undefined) {
+      const b = document.createElement('span');
+      const on = node.has_summary;
+      b.className = 'badge' + (on ? ' on' : '');
+      b.textContent = 'S';
+      b.title = on ? 'Общий саммари есть' : 'Общего саммари нет';
+      row.appendChild(b);
+    }
+
     const actions = document.createElement('span');
     actions.className = 'actions';
     if (mp3Count > 0) {
@@ -420,6 +429,12 @@ function renderNode(node, isRoot) {
       b.title = 'Запустить полный pipeline на все mp3 в этой папке';
       b.onclick = (e) => { e.stopPropagation(); runOnNode(node, 'pipeline'); };
       actions.appendChild(b);
+
+      const bSum = document.createElement('button');
+      bSum.textContent = 'Summary';
+      bSum.title = 'Создать один саммари для всей папки';
+      bSum.onclick = (e) => { e.stopPropagation(); runOnNode(node, 'summary'); };
+      actions.appendChild(bSum);
     }
     row.appendChild(actions);
 
@@ -458,7 +473,7 @@ function renderNode(node, isRoot) {
     size.textContent = `${node.size_mb} MB`;
     row.appendChild(size);
 
-    for (const kind of ['raw', 'clean', 'summary']) {
+    for (const kind of ['raw', 'clean']) {
       const b = document.createElement('span');
       const on = node[`has_${kind}`];
       b.className = 'badge' + (on ? ' on' : '');
@@ -469,7 +484,7 @@ function renderNode(node, isRoot) {
 
     const actions = document.createElement('span');
     actions.className = 'actions';
-    for (const cmd of ['pipeline', 'whisper', 'clean', 'summary']) {
+    for (const cmd of ['pipeline', 'whisper', 'clean']) {
       const b = document.createElement('button');
       b.textContent = cmd === 'pipeline' ? '▶' : cmd;
       b.title = cmd === 'pipeline' ? 'Запустить pipeline' : `Только ${cmd}`;

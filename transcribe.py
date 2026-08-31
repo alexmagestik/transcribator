@@ -22,6 +22,7 @@ import logging
 import sys
 import urllib.error
 import urllib.request
+from collections import defaultdict
 from pathlib import Path
 from typing import Iterable
 
@@ -283,6 +284,53 @@ class OllamaClient:
             results.append(self.chat(system_prompt, user_content(chunk), temperature=temperature))
         return "\n\n".join(results)
 
+    def summarize_long_text(
+        self,
+        system_prompt: str,
+        text: str,
+        task_name: str,
+        *,
+        temperature: float,
+    ) -> str:
+        """
+        Специальный метод для саммаризации длинных текстов, чтобы избежать
+        дублирования блоков структуры при разделении на части.
+        """
+        if len(text) <= self.settings.ollama_chunk_chars:
+            return self.chat(system_prompt, text, temperature=temperature)
+
+        chunks = split_text_chunks(text, self.settings.ollama_chunk_chars)
+        log.info("%s: текст слишком длинный, используем двухэтапную саммаризацию (%d частей)", task_name, len(chunks))
+
+        intermediate_prompt = (
+            "Извлеки все ключевые факты, определения, примеры и важные детали "
+            "из этого фрагмента текста. Сохраняй технические подробности и "
+            "терминологию. Верни результат в виде сжатого списка тезисов."
+        )
+
+        intermediates: list[str] = []
+        for index, chunk in enumerate(chunks, start=1):
+            log.info("%s: извлечение тезисов (часть %d/%d)", task_name, index, len(chunks))
+            res = self.chat(intermediate_prompt, chunk, temperature=temperature)
+            intermediates.append(res)
+
+        combined_intermediates = "\n\n".join(intermediates)
+
+        # Если итоговый набор тезисов всё ещё слишком большой, пробуем сжать его ещё раз
+        # (рекурсивно), но обычно одного этапа достаточно для одного занятия.
+        if len(combined_intermediates) > self.settings.ollama_chunk_chars:
+            log.info("%s: промежуточные результаты всё ещё слишком велики, сжимаем повторно", task_name)
+            # Для рекурсии используем тот же промежуточный промпт
+            combined_intermediates = self.process_long_text(
+                intermediate_prompt,
+                combined_intermediates,
+                f"{task_name} (сжатие)",
+                temperature=temperature
+            )
+
+        log.info("%s: формирование итогового структурированного конспекта", task_name)
+        return self.chat(system_prompt, combined_intermediates, temperature=temperature)
+
 
 def should_skip(output_path: Path, force: bool) -> bool:
     return output_path.exists() and not force
@@ -358,20 +406,34 @@ def run_summary(
 ) -> list[Path]:
     written: list[Path] = []
 
-    for txt_path in paths:
-        output_path = output_path_for_txt(txt_path, settings.summary_dir, ".md", settings)
+    # Группируем файлы по родительской папке
+    groups = defaultdict(list)
+    for p in paths:
+        groups[p.parent].append(p)
+
+    for group_path, files in groups.items():
+        # Сортируем файлы в алфавитном порядке
+        sorted_files = sorted(files)
+
+        # Собираем весь текст из файлов этой папки в один большой текст
+        combined_text = "\n\n".join([read_text(f) for f in sorted_files])
+
+        # Путь вывода: summary/<имя_папки>.md (без вложенных подпапок)
+        folder_name = group_path.name if group_path.name else "root"
+        output_path = settings.summary_dir / f"{folder_name}.md"
+
         if should_skip(output_path, force):
             log.info("Пропуск (уже есть): %s", output_path)
             continue
 
         set_step("summary")
-        set_current_file(txt_path)
-        text = read_text(txt_path)
+        set_current_file(group_path)
         log.info("Summary-модель: %s", ollama.model)
-        summary = ollama.process_long_text(
+
+        summary = ollama.summarize_long_text(
             prompts.summary,
-            text,
-            "Саммаризация",
+            combined_text,
+            f"Саммаризация папки {folder_name}",
             temperature=settings.ollama_temperature_summary,
         )
         write_text(output_path, summary)
