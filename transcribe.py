@@ -20,6 +20,7 @@ import fnmatch
 import json
 import logging
 import sys
+import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
@@ -170,14 +171,20 @@ class WhisperTranscriber:
         if self._model is None:
             from faster_whisper import WhisperModel
 
+            # Если указан локальный путь и он существует, используем его
+            model_name = self.settings.whisper_model
+            if self.settings.whisper_model_path and self.settings.whisper_model_path.exists():
+                log.info("Использование локальной модели Whisper из: %s", self.settings.whisper_model_path)
+                model_name = str(self.settings.whisper_model_path)
+
             log.info(
                 "Загрузка Whisper %s (%s, %s)...",
-                self.settings.whisper_model,
+                model_name,
                 self.settings.whisper_device,
                 self.settings.whisper_compute_type,
             )
             self._model = WhisperModel(
-                self.settings.whisper_model,
+                model_name,
                 device=self.settings.whisper_device,
                 compute_type=self.settings.whisper_compute_type,
             )
@@ -522,6 +529,10 @@ def run_pipeline(
     selected = steps or {"whisper", "clean", "summary"}
     mp3_files = mp3_files or mp3_targets(path, settings)
 
+    # Если запуск для одного файла, отключаем summary по умолчанию
+    if len(mp3_files) == 1 and steps is None:
+        selected = {"whisper", "clean"}
+
     if "whisper" in selected:
         set_step("whisper")
         run_whisper(mp3_files, force=force, settings=settings, prompts=prompts)
@@ -606,6 +617,11 @@ def build_parser(settings: Settings) -> argparse.ArgumentParser:
         help=f"Устройство Whisper (по умолчанию из .env: {settings.whisper_device})",
     )
     parser.add_argument(
+        "--whisper-model-path",
+        type=Path,
+        help="Локальный путь к модели Whisper (если указан, используется вместо названия модели)",
+    )
+    parser.add_argument(
         "--whisper-compute-type",
         default=settings.whisper_compute_type,
         help=f"Тип вычислений Whisper (по умолчанию из .env: {settings.whisper_compute_type})",
@@ -640,6 +656,7 @@ def apply_cli_overrides(settings: Settings, args: argparse.Namespace) -> Setting
         ollama_temperature_clean=settings.ollama_temperature_clean,
         ollama_temperature_summary=settings.ollama_temperature_summary,
         whisper_model=settings.whisper_model,
+        whisper_model_path=args.whisper_model_path or settings.whisper_model_path,
         whisper_device=args.whisper_device,
         whisper_compute_type=args.whisper_compute_type,
         whisper_beam_size=settings.whisper_beam_size,
@@ -650,7 +667,22 @@ def apply_cli_overrides(settings: Settings, args: argparse.Namespace) -> Setting
     )
 
 
+def _format_duration(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:.2f} с"
+    elif seconds < 3600:
+        m = int(seconds // 60)
+        s = int(seconds % 60)
+        return f"{m} мин, {s} сек"
+    else:
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        return f"{h} ч, {m} мин, {s} сек"
+
+
 def main(argv: list[str] | None = None) -> int:
+    start_time = time.time()
     settings = load_settings()
     prompts = load_prompts(settings.prompts_file)
 
@@ -752,6 +784,10 @@ def main(argv: list[str] | None = None) -> int:
     except (ValueError, FileNotFoundError, RuntimeError) as exc:
         log.error("%s", exc)
         return 1
+
+    # Печатаем время выполнения в конце
+    duration = time.time() - start_time
+    log.info("Общее время выполнения: %s", _format_duration(duration))
 
     return 0
 

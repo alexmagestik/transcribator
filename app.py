@@ -41,6 +41,20 @@ BASE_DIR = Path(__file__).resolve().parent
 app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 log = logging.getLogger("app")
 
+def _format_duration(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:.2f} с"
+    elif seconds < 3600:
+        m = int(seconds // 60)
+        s = int(seconds % 60)
+        return f"{m} мин, {s} сек"
+    else:
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        return f"{h} ч, {m} мин, {s} сек"
+
+
 # ---------------------------------------------------------------------------
 # Состояние текущего запуска
 # ---------------------------------------------------------------------------
@@ -181,14 +195,17 @@ def _reader_thread(proc: subprocess.Popen) -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("reader thread error: %s", exc)
     finally:
-        proc.wait()
-        duration = time.time() - _current["started_at"]
-        duration_str = f"Общее время выполнения: {duration:.2f} с"
-        now = time.strftime("%H:%M:%S")
+        # Ждем завершения процесса
+        try:
+            proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            log.warning("Reader thread: process wait timed out")
+
         with _state_lock:
-            _current["log_seq"] += 1
-            _current["log_buffer"].append((_current["log_seq"], duration_str, now))
             _current["exit_code"] = proc.returncode
+
+        # Даем время SSE-потоку вычитать данные из буфера
+        time.sleep(0.5)
         _current["done_event"].set()
 
 
@@ -225,12 +242,12 @@ def api_run() -> Response:
             "current_file": st.get("current_file"),
         }), 409
 
-    # Собираем argv: venv-python, transcribe.py, command, path, [flags]
+    # Собираем argv: venv-python, -u (unbuffered), transcribe.py, command, path, [flags]
     venv_py = BASE_DIR / ".venv" / "bin" / "python"
     if not venv_py.exists():
         venv_py = Path(sys.executable)
 
-    argv: list[str] = [str(venv_py), str(BASE_DIR / "transcribe.py"), command, target]
+    argv: list[str] = [str(venv_py), "-u", str(BASE_DIR / "transcribe.py"), command, target]
     if match:
         argv += ["--match", match]
     if force:

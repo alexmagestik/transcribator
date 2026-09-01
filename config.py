@@ -59,6 +59,7 @@ class Settings:
     ollama_temperature_summary: float
 
     whisper_model: str
+    whisper_model_path: Path | None
     whisper_device: str
     whisper_compute_type: str
     whisper_beam_size: int
@@ -99,6 +100,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
         ollama_temperature_clean=_env_float("OLLAMA_TEMPERATURE_CLEAN", 0.1),
         ollama_temperature_summary=_env_float("OLLAMA_TEMPERATURE_SUMMARY", 0.4),
         whisper_model=os.getenv("WHISPER_MODEL", "large-v3"),
+        whisper_model_path=_env_path("WHISPER_MODEL_PATH", "none") if os.getenv("WHISPER_MODEL_PATH") else None,
         whisper_device=os.getenv("WHISPER_DEVICE", "cpu"),
         whisper_compute_type=os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
         whisper_beam_size=_env_int("WHISPER_BEAM_SIZE", 9),
