@@ -104,10 +104,16 @@ def _output_paths(mp3_abs: Path) -> dict[str, Path | None]:
         rel = mp3_abs.resolve()
         src = _settings.source_dir.resolve()
         rel.relative_to(src)  # бросит ValueError, если вне
+
+        # Для summary используем логику run_summary: summary/<имя_папки>.md
+        # Если файл в корне source_dir, используем "root"
+        folder_name = rel.parent.name if rel.parent != src else "root"
+        summary_path = _settings.summary_dir / f"{folder_name}.md"
+
         return {
             "raw": output_path_for_mp3(mp3_abs, _settings.raw_dir, ".txt", _settings),
             "clean": output_path_for_mp3(mp3_abs, _settings.clean_dir, ".txt", _settings),
-            "summary": output_path_for_mp3(mp3_abs, _settings.summary_dir, ".md", _settings),
+            "summary": summary_path if summary_path.exists() else None,
         }
     except (ValueError, Exception):
         return {"raw": None, "clean": None, "summary": None}
@@ -429,7 +435,18 @@ def api_view() -> Response:
             "summary": _settings.summary_dir,
         }[kind]
         ext = ".md" if kind == "summary" else ".txt"
-        abs_path = output_path_for_mp3(mp3_abs, target_dir, ext, _settings)
+        if kind == "summary":
+            # Логика как в run_summary: summary/<имя_папки>.md
+            src = _settings.source_dir.resolve()
+            if mp3_abs.is_dir():
+                folder_name = mp3_abs.name if mp3_abs != src else "root"
+            else:
+                folder_name = mp3_abs.parent.name if mp3_abs.parent != src else "root"
+            abs_path = _settings.summary_dir / f"{folder_name}.md"
+        else:
+            abs_path = output_path_for_mp3(mp3_abs, target_dir, ext, _settings)
+
+
     else:
         # Старый путь: абсолютный или относительный к BASE_DIR
         abs_path = _abs(rel_path)

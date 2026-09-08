@@ -412,7 +412,7 @@ function renderNode(node, isRoot) {
       row.appendChild(empty);
     }
 
-    if (node.has_summary !== undefined) {
+    if (node.has_summary !== undefined && !isRoot) {
       const b = document.createElement('span');
       const on = node.has_summary;
       b.className = 'badge' + (on ? ' on' : '');
@@ -456,6 +456,9 @@ function renderNode(node, isRoot) {
       const open = ul.style.display !== 'none';
       ul.style.display = open ? 'none' : 'block';
       chev.classList.toggle('open', !open);
+      if (node.has_summary) {
+        openFile(node, 'summary');
+      }
     };
   } else {
     // file
@@ -499,7 +502,7 @@ function renderNode(node, isRoot) {
       $$('.node.selected').forEach(n => n.classList.remove('selected'));
       row.classList.add('selected');
       state.selected = node;
-      openFile(node);
+      openFile(node, 'raw');
     };
   }
   return li;
@@ -514,7 +517,7 @@ function setActiveTab(kind) {
   $('#btn-rerun-step').disabled = !kind || state.running;
 }
 
-async function openFile(node) {
+async function openFile(node, preferredKind = null) {
   state.selected = node;
   // определить, какие вкладки доступны
   const tabs = $$('#tabs .tab');
@@ -523,11 +526,16 @@ async function openFile(node) {
     const on = node[`has_${kind}`];
     t.classList.toggle('disabled', !on);
   }
-  // выбрать первую доступную (предпочитая summary)
-  const order = ['summary', 'clean', 'raw'];
-  let chosen = null;
-  for (const k of order) {
-    if (node[`has_${k}`]) { chosen = k; break; }
+  // выбрать вкладку: сначала приоритетную, затем по порядку
+  let chosen = preferredKind;
+  if (chosen && !node[`has_${chosen}`]) {
+    chosen = null;
+  }
+  if (!chosen) {
+    const order = ['summary', 'clean', 'raw'];
+    for (const k of order) {
+      if (node[`has_${k}`]) { chosen = k; break; }
+    }
   }
   if (!chosen) {
     $('#viewer').innerHTML = '<div class="empty">Нет артефактов. Запустите pipeline на этом файле.</div>';
