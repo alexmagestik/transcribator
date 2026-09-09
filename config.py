@@ -78,6 +78,7 @@ class Prompts:
     clear: str
     clear_user: str
     summary: str
+    summary_intermediate: str
     notes: str
 
 
@@ -138,5 +139,6 @@ def load_prompts(path: Path) -> Prompts:
         clear=data["clear"]["text"].strip(),
         clear_user=data["clear_user"]["text"].strip(),
         summary=data["summary"]["text"].strip(),
+        summary_intermediate=data["summary_intermediate"]["text"].strip(),
         notes=data["notes"]["text"].strip(),
     )

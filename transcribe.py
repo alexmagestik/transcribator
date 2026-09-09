@@ -300,6 +300,7 @@ class OllamaClient:
         task_name: str,
         *,
         temperature: float,
+        intermediate_prompt: str,
     ) -> str:
         """
         Специальный метод для саммаризации длинных текстов, чтобы избежать
@@ -310,12 +311,6 @@ class OllamaClient:
 
         chunks = split_text_chunks(text, self.settings.ollama_chunk_chars)
         log.info("%s: текст слишком длинный, используем двухэтапную саммаризацию (%d частей)", task_name, len(chunks))
-
-        intermediate_prompt = (
-            "Извлеки все ключевые факты, определения, примеры и важные детали "
-            "из этого фрагмента текста. Сохраняй технические подробности и "
-            "терминологию. Верни результат в виде сжатого списка тезисов."
-        )
 
         intermediates: list[str] = []
         for index, chunk in enumerate(chunks, start=1):
@@ -450,6 +445,7 @@ def run_summary(
             combined_text,
             f"Саммаризация папки {folder_name}",
             temperature=settings.ollama_temperature_summary,
+            intermediate_prompt=prompts.summary_intermediate,
         )
         write_text(output_path, summary)
         log.info("Сохранено: %s", output_path)
