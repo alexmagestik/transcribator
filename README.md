@@ -1,9 +1,9 @@
 # Transcribator
 
-**Локальный пайплайн транскрибации аудио: MP3 → черновик → чистый текст → краткое саммари.**
+**Локальный пайплайн транскрибации аудио: MP3 → черновик → чистый текст → подробный конспект → итоговое саммари.**
 
 Полностью офлайн: распознавание речи через [Whisper Large-v3](https://github.com/SYSTRAN/faster-whisper),
-а очистка и суммаризация — через локальные LLM в [Ollama](https://ollama.com).
+а очистка, конспектирование и суммаризация — через локальные LLM в [Ollama](https://ollama.com).
 Никакие аудио или тексты не покидают машину.
 
 ![Результат транскрибации](images/transcribator_result.png)
@@ -15,19 +15,20 @@
 У вас есть часовые лекции, подкасты или записи совещаний в MP3. Хочется:
 
 - **читать** их как обычный текст (с таймкодами или без);
-- **быстро понять суть** без перемотки — структурированное саммари с разделами;
+- **иметь подробный конспект** с сохранением всех технических деталей и примеров;
+- **быстро понять суть** без перемотки — структурированное итоговое саммари;
 - **не платить** облачным сервисам и **не сливать** контент в чужие API.
 
-Transcribator берёт папку с MP3 и за один прогон выдаёт три файла:
+Transcribator берёт папку с MP3 и за один прогон выдаёт четыре артефакта:
 
 ```
 source-mp3/.../Лекция.mp3
         ↓  Whisper Large-v3 (CPU, faster-whisper)
 raw/.../Лекция.txt              ← «как распознал», с таймкодами
-        ↓  Ollama (llama3.1-clean-32k)
-clean/.../Лекция.txt            ← пунктуация, абзацы, убрано «эээ», «как бы»
-        ↓  Ollama (gemma4:e2b-32k)
-summary/.../Лекция.md           ← структурированное саммари в Markdown
+        ↓  Ollama (llama3.1-clean-32k)      ↓  Ollama (gemma4:e2b-32k)
+clean/.../Лекция.txt            ← чистый текст            notes/.../Лекция.md
+        ↓  Ollama (gemma4:e2b-32k)          ← подробный учебный конспект
+summary/.../Лекция.md           ← структурированный итоговый материал
 ```
 
 ![Процесс работы](images/transcribator_process.png)
@@ -42,48 +43,40 @@ summary/.../Лекция.md           ← структурированное с�
 ## Основная функция
 
 - **Просмотр библиотеки** аудиофайлов в виде дерева папок с индикаторами
-  «обработано / не обработано» по каждому из трёх шагов.
+  «обработано / не обработано» по каждому из четырёх шагов.
 - **Запуск пайплайна** на отдельный файл, на папку или на всё сразу — одной кнопкой.
-- **Перезапуск отдельного шага** (например, только clean) без повторной обработки Whisper.
-- **Просмотр результатов** прямо в браузере: чистый текст и отрендеренный Markdown-саммари.
+- **Перезапуск отдельного шага** (например, только clean или notes) без повторной обработки Whisper.
+- **Встроенный текстовый редактор**: можно править любые результаты (raw, clean, notes, summary) прямо в браузере и сохранять их.
+- **Просмотр результатов** прямо в браузере: тексты и отрендеренный Markdown.
 - **Живые логи** обработки в реальном времени (Server-Sent Events).
 - **Работа из терминала** тоже возможна — один и тот же `transcribe.py` используется и GUI, и CLI.
 
 ## Что вы получаете на выходе
 
 **`raw/*.txt`** — сырая расшифровка Whisper:
-
 ```
 [00:00:00.000 -> 00:00:08.500] Добрый день, коллеги. Сегодня мы поговорим
 про архитектуру Apache Kafka и разберём, как она устроена изнутри.
-[00:00:08.500 -> 00:00:14.200] Начнём с основных понятий — топик, партиция,
-брокер...
 ```
 
 **`clean/*.txt`** — отредактированный текст (пунктуация, абзацы, убраны слова-паразиты):
-
 ```
 Добрый день, коллеги. Сегодня мы поговорим про архитектуру Apache Kafka
 и разберём, как она устроена изнутри.
-
-Начнём с основных понятий: топик, партиция, брокер...
 ```
 
-**`summary/*.md`** — структурированный конспект в Markdown:
+**`notes/*.md`** — подробный учебный конспект (создаётся из raw):
+```markdown
+## Архитектура Kafka
+Преподаватель подробно разбирает механизм работы брокера... 
+Важный нюанс: партиции позволяют масштабировать чтение...
+```
 
+**`summary/*.md`** — структурированный итоговый материал (создаётся из clean):
 ```markdown
 # Учебный конспект по Apache Kafka
-
 ## Основная идея
-Apache Kafka — это open-source система для обмена сообщениями по модели
-Publisher-Subscriber...
-
-## Ключевые понятия
-- **Топик** — категория/имя для потока сообщений...
-- **Партиция** — единица параллелизма внутри топика...
-
-## Когда использовать
-Для event-streaming, логов, аналитики в реальном времени...
+Apache Kafka — это open-source система для обмена сообщениями...
 ```
 
 ## Технологии
@@ -93,7 +86,7 @@ Publisher-Subscriber...
 | Backend | Python 3.11+, Flask |
 | Frontend | Vanilla JS SPA, HTML/CSS (без сборки и без зависимостей) |
 | STT | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — Whisper Large-v3, CPU, int8 |
-| LLM (clean/summary) | Ollama: `llama3.1-clean-32k:latest`, `gemma4:e2b-32k` |
+| LLM (clean/notes/summary) | Ollama: `llama3.1-clean-32k:latest`, `gemma4:e2b-32k` |
 | Markdown-рендер | Python `markdown` |
 | Конфиг | `python-dotenv` + `prompts.toml` |
 
@@ -124,7 +117,6 @@ ollama pull gemma4:e2b-32k
 ```
 
 Проверьте, что ollama отвечает:
-
 ```bash
 curl http://127.0.0.1:11434/api/tags
 ```
@@ -139,9 +131,9 @@ curl http://127.0.0.1:11434/api/tags
 
 В UI вы увидите:
 
-- слева — дерево папок `source-mp3/` с бейджами `R / C / S`
-  (raw / clean / summary) — зелёный = файл уже создан, серый = нет;
-- справа — вкладки `raw / clean / summary` для просмотра содержимого;
+- слева — дерево папок `source-mp3/` с бейджами `R / C / N / S`
+  (raw / clean / notes / summary) — зелёный = файл уже создан, серый = нет;
+- справа — вкладки `raw / clean / notes / summary` для просмотра и редактирования содержимого;
 - внизу — панель логов в реальном времени во время обработки.
 
 ### 5. Запуск из терминала (CLI, без UI)
@@ -153,9 +145,10 @@ curl http://127.0.0.1:11434/api/tags
 # Только конкретный файл
 .venv/bin/python transcribe.py pipeline source-mp3/Лекция.mp3
 
-# Только один шаг — whisper / clean / summary
+# Только один шаг — whisper / clean / notes / summary
 .venv/bin/python transcribe.py whisper source-mp3 --match "Part12"
 .venv/bin/python transcribe.py clean raw --match "Part12" --force
+.venv/bin/python transcribe.py notes raw --match "Part12"
 .venv/bin/python transcribe.py summary clean --match "Part12"
 ```
 
@@ -165,7 +158,7 @@ curl http://127.0.0.1:11434/api/tags
 
 ```
 transcribator/
-├── transcribe.py               # CLI пайплайна (whisper/clean/summary/pipeline)
+├── transcribe.py               # CLI пайплайна (whisper/clean/notes/summary/pipeline)
 ├── app.py                      # Flask-сервер веб-интерфейса
 ├── config.py                   # Settings + Prompts из .env / prompts.toml
 ├── status.py                   # Трекинг активной задачи (.transcribe-status.json)
@@ -176,7 +169,8 @@ transcribator/
 ├── source-mp3/                 # ← положите сюда ваши MP3
 ├── raw/                        # ← Whisper-транскрипты (создаются)
 ├── clean/                      # ← очищенные тексты (создаются)
-├── summary/                    # ← саммари в Markdown (создаются)
+├── notes/                      # ← подробные конспекты (создаются)
+├── summary/                    # ← итоговые саммари (создаются)
 │
 ├── templates/
 │   └── index.html              # Единственный файл UI (vanilla JS SPA)
@@ -186,16 +180,18 @@ transcribator/
     │   ├── transcribe-pipeline.md
     │   ├── transcribe-whisper.md
     │   ├── transcribe-clean.md
+    │   ├── transcribe-notes.md
     │   └── transcribe-summary.md
     └── skills/                 # Claude Code skills (опционально)
         ├── transcribe-pipeline/
         ├── transcribe-whisper/
         ├── transcribe-clean/
+        ├── transcribe-notes/
         ├── transcribe-summary/
         └── start-web-ui/       # Запуск Flask-сервера по запросу
 ```
 
-Папки `raw/`, `clean/`, `summary/` и файлы создаются при первом запуске.
+Папки `raw/`, `clean/`, `notes/`, `summary/` и файлы создаются при первом запуске.
 Имена и пути — относительные к корню проекта (настраивается в `.env`).
 
 ## Конфигурация
@@ -207,16 +203,18 @@ transcribator/
 | `SOURCE_DIR` | Папка с исходными MP3 | `source-mp3` |
 | `RAW_DIR` | Куда писать Whisper-транскрипты | `raw` |
 | `CLEAN_DIR` | Куда писать очищенный текст | `clean` |
+| `NOTES_DIR` | Куда писать подробные конспекты | `notes` |
 | `SUMMARY_DIR` | Куда писать саммари | `summary` |
 | `OLLAMA_HOST` | Адрес Ollama | `http://127.0.0.1:11434` |
 | `OLLAMA_CLEAN_MODEL` | Модель для шага clean | `llama3.1-clean-32k:latest` |
+| `OLLAMA_NOTES_MODEL` | Модель для шага notes | `gemma4:e2b-32k` |
 | `OLLAMA_SUMMARY_MODEL` | Модель для шага summary | `gemma4:e2b-32k` |
 | `WHISPER_MODEL` | Размер модели Whisper | `large-v3` |
 | `WHISPER_DEVICE` | CPU или CUDA | `cpu` |
 | `WHISPER_BEAM_SIZE` | Beam search ширина | `9` |
 | `WHISPER_NO_SPEECH_THRESHOLD` | Порог «тишины» (none = не пропускать) | `none` |
 
-Горячие слова (имена, термины, специфичная лексика) добавляются в
+Горяче слова (имена, термины, специфичная лексика) добавляются в
 `prompts.toml`, секция `[hotwords]`.
 
 ## Использование через Claude Code (опционально)
@@ -225,14 +223,14 @@ transcribator/
 чата на естественном языке. В репозитории настроены:
 
 - **subagents** (`transcribe-pipeline`, `transcribe-whisper`, `transcribe-clean`,
-  `transcribe-summary`) — каждый отвечает за свой шаг;
+  `transcribe-notes`, `transcribe-summary`) — каждый отвечает за свой шаг;
 - **skills** (`start-web-ui` +4 транскриб-скилла) — обёртки с bash-скриптами.
 
 Примеры запросов:
 
 > «Запусти полный пайплайн для `Занятие 2. Apache Kafka/part12.mp3`»
 
-> «Только summary, для всего `source-mp3/`»
+> «Только notes, для всего `source-mp3/`»
 
 > «Открой веб-интерфейс»
 
@@ -244,7 +242,7 @@ transcribator/
 ## Производительность
 
 Whisper Large-v3 на CPU с `int8` — примерно **10–20× от длительности аудио**.
-То есть час лекции = 10–20 минут обработки. Шаги clean и summary через
+То есть час лекции = 10–20 минут обработки. Шаги clean, notes и summary через
 Ollama — обычно 1–3 минуты на файл (зависит от модели и длины).
 
 Чтобы ускорить:
@@ -260,8 +258,7 @@ Ollama — обычно 1–3 минуты на файл (зависит от м
   = один активный subprocess `transcribe.py`.
 - Аплоад MP3 из браузера не реализован — кладите файлы в `source-mp3/`
   вручную.
-- Нет веб-интерфейса для редактирования `prompts.toml` или `.env` —
-  правки делаются в текстовом редакторе и подхватываются при следующем
+- Редактирование промптов и `.env` делается в текстовом редакторе и подхватывается при следующем
   запуске.
 
 ## Лицензия
