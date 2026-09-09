@@ -573,7 +573,7 @@ def run_pipeline(
 
     # Если запуск для одного файла (а не папки), отключаем summary по умолчанию
     if path.is_file() and len(mp3_files) == 1 and steps is None:
-        selected = {"whisper", "clean"}
+        selected = {"whisper", "clean", "notes"}
 
     if "whisper" in selected:
         set_step("whisper")
