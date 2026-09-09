@@ -47,6 +47,7 @@ class Settings:
     raw_dir: Path
     clean_dir: Path
     summary_dir: Path
+    notes_dir: Path
     prompts_file: Path
     status_file: Path
 
@@ -54,9 +55,11 @@ class Settings:
     ollama_model: str
     ollama_clean_model: str
     ollama_summary_model: str
+    ollama_notes_model: str
     ollama_chunk_chars: int
     ollama_temperature_clean: float
     ollama_temperature_summary: float
+    ollama_temperature_notes: float
 
     whisper_model: str
     whisper_model_path: Path | None
@@ -75,6 +78,7 @@ class Prompts:
     clear: str
     clear_user: str
     summary: str
+    notes: str
 
 
 def load_settings(env_file: Path | None = None) -> Settings:
@@ -84,6 +88,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
         raw_dir=_env_path("RAW_DIR", "raw"),
         clean_dir=_env_path("CLEAN_DIR", "clean"),
         summary_dir=_env_path("SUMMARY_DIR", "summary"),
+        notes_dir=_env_path("NOTES_DIR", "notes"),
         prompts_file=_env_path("PROMPTS_FILE", "prompts.toml"),
         status_file=_env_path("STATUS_FILE", ".transcribe-status.json"),
         ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
@@ -96,9 +101,14 @@ def load_settings(env_file: Path | None = None) -> Settings:
             "OLLAMA_SUMMARY_MODEL",
             os.getenv("OLLAMA_MODEL", "gemma4:e2b-32k"),
         ),
+        ollama_notes_model=os.getenv(
+            "OLLAMA_NOTES_MODEL",
+            os.getenv("OLLAMA_MODEL", "gemma4:e2b-32k"),
+        ),
         ollama_chunk_chars=_env_int("OLLAMA_CHUNK_CHARS", 24_000),
         ollama_temperature_clean=_env_float("OLLAMA_TEMPERATURE_CLEAN", 0.1),
         ollama_temperature_summary=_env_float("OLLAMA_TEMPERATURE_SUMMARY", 0.4),
+        ollama_temperature_notes=_env_float("OLLAMA_TEMPERATURE_NOTES", 0.4),
         whisper_model=os.getenv("WHISPER_MODEL", "large-v3"),
         whisper_model_path=_env_path("WHISPER_MODEL_PATH", "none") if os.getenv("WHISPER_MODEL_PATH") else None,
         whisper_device=os.getenv("WHISPER_DEVICE", "cpu"),
@@ -128,4 +138,5 @@ def load_prompts(path: Path) -> Prompts:
         clear=data["clear"]["text"].strip(),
         clear_user=data["clear_user"]["text"].strip(),
         summary=data["summary"]["text"].strip(),
+        notes=data["notes"]["text"].strip(),
     )

@@ -201,6 +201,7 @@
     <div class="viewer-tabs" id="tabs">
       <div class="tab disabled" data-kind="raw">raw</div>
       <div class="tab disabled" data-kind="clean">clean</div>
+      <div class="tab disabled" data-kind="notes">notes</div>
       <div class="tab disabled" data-kind="summary">summary</div>
       <div class="tab-actions">
         <button id="btn-rerun-step" disabled>Re-run this step</button>
@@ -476,7 +477,7 @@ function renderNode(node, isRoot) {
     size.textContent = `${node.size_mb} MB`;
     row.appendChild(size);
 
-    for (const kind of ['raw', 'clean']) {
+    for (const kind of ['raw', 'clean', 'notes']) {
       const b = document.createElement('span');
       const on = node[`has_${kind}`];
       b.className = 'badge' + (on ? ' on' : '');
@@ -487,7 +488,7 @@ function renderNode(node, isRoot) {
 
     const actions = document.createElement('span');
     actions.className = 'actions';
-    for (const cmd of ['pipeline', 'whisper', 'clean']) {
+    for (const cmd of ['pipeline', 'whisper', 'clean', 'notes']) {
       const b = document.createElement('button');
       b.textContent = cmd === 'pipeline' ? '▶' : cmd;
       b.title = cmd === 'pipeline' ? 'Запустить pipeline' : `Только ${cmd}`;
@@ -532,7 +533,7 @@ async function openFile(node, preferredKind = null) {
     chosen = null;
   }
   if (!chosen) {
-    const order = ['summary', 'clean', 'raw'];
+    const order = ['summary', 'notes', 'clean', 'raw'];
     for (const k of order) {
       if (node[`has_${k}`]) { chosen = k; break; }
     }

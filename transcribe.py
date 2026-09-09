@@ -273,8 +273,10 @@ class OllamaClient:
         *,
         temperature: float,
         user_template: str | None = None,
+        chunk_size: int | None = None,
     ) -> str:
-        chunks = split_text_chunks(text, self.settings.ollama_chunk_chars)
+        limit = chunk_size or self.settings.ollama_chunk_chars
+        chunks = split_text_chunks(text, limit)
 
         def user_content(chunk: str) -> str:
             if user_template is not None:
@@ -450,6 +452,46 @@ def run_summary(
     return written
 
 
+def run_notes(
+    paths: Iterable[Path],
+    *,
+    force: bool,
+    ollama: OllamaClient,
+    prompts: Prompts,
+    settings: Settings,
+) -> list[Path]:
+    written: list[Path] = []
+
+    for txt_path in paths:
+        output_path = output_path_for_txt(txt_path, settings.notes_dir, ".md", settings)
+        if should_skip(output_path, force):
+            log.info("Пропуск (уже есть): %s", output_path)
+            continue
+
+        set_step("notes")
+        set_current_file(txt_path)
+        log.info("Notes-модель: %s", ollama.model)
+
+        # Расчёт размера чанка с учётом промпта (контекст 32к)
+        prompt_len = len(prompts.notes)
+        effective_chunk_size = max(1000, 32000 - prompt_len)
+
+        text = read_text(txt_path)
+        notes = ollama.process_long_text(
+            prompts.notes,
+            text,
+            "Создание конспекта",
+            temperature=settings.ollama_temperature_notes,
+            chunk_size=effective_chunk_size,
+        )
+        write_text(output_path, notes)
+        log.info("Сохранено: %s", output_path)
+        written.append(output_path)
+
+    return written
+
+
+
 def mp3_targets(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
     if path.suffix.lower() == ".mp3":
@@ -526,7 +568,7 @@ def run_pipeline(
     steps: set[str] | None = None,
     mp3_files: list[Path] | None = None,
 ) -> None:
-    selected = steps or {"whisper", "clean", "summary"}
+    selected = steps or {"whisper", "clean", "notes", "summary"}
     mp3_files = mp3_files or mp3_targets(path, settings)
 
     # Если запуск для одного файла (а не папки), отключаем summary по умолчанию
@@ -549,6 +591,11 @@ def run_pipeline(
         clean_ollama = OllamaClient(settings, model=settings.ollama_clean_model)
         run_clean(raw_files, force=force, ollama=clean_ollama, prompts=prompts, settings=settings)
 
+    if "notes" in selected:
+        set_step("notes")
+        notes_ollama = OllamaClient(settings, model=settings.ollama_notes_model)
+        run_notes(raw_files, force=force, ollama=notes_ollama, prompts=prompts, settings=settings)
+
     clean_files = [
         output_path_for_mp3(mp3, settings.clean_dir, ".txt", settings) for mp3 in mp3_files
     ]
@@ -568,8 +615,8 @@ def build_parser(settings: Settings) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "command",
-        choices=["pipeline", "whisper", "clean", "summary", "list", "status"],
-        help="pipeline — все шаги; whisper/clean/summary — отдельный шаг; list — список файлов; status — проверка процесса",
+        choices=["pipeline", "whisper", "clean", "notes", "summary", "list", "status"],
+        help="pipeline — все шаги; whisper/clean/notes/summary — отдельный шаг; list — список файлов; status — проверка процесса",
     )
     parser.add_argument(
         "path",
@@ -646,15 +693,18 @@ def apply_cli_overrides(settings: Settings, args: argparse.Namespace) -> Setting
         raw_dir=settings.raw_dir,
         clean_dir=settings.clean_dir,
         summary_dir=settings.summary_dir,
+        notes_dir=settings.notes_dir,
         prompts_file=settings.prompts_file,
         status_file=settings.status_file,
         ollama_host=args.ollama_host,
         ollama_model=args.ollama_model,
         ollama_clean_model=args.ollama_clean_model,
         ollama_summary_model=args.ollama_summary_model,
+        ollama_notes_model=settings.ollama_notes_model,
         ollama_chunk_chars=settings.ollama_chunk_chars,
         ollama_temperature_clean=settings.ollama_temperature_clean,
         ollama_temperature_summary=settings.ollama_temperature_summary,
+        ollama_temperature_notes=settings.ollama_temperature_notes,
         whisper_model=settings.whisper_model,
         whisper_model_path=args.whisper_model_path or settings.whisper_model_path,
         whisper_device=args.whisper_device,
@@ -703,12 +753,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "list":
         list_kind = (str(path) if path else "mp3").lower()
-        if list_kind not in {"mp3", "raw", "clean"}:
-            parser.error("Для list укажите тип: mp3, raw или clean")
+        if list_kind not in {"mp3", "raw", "clean", "notes"}:
+            parser.error("Для list укажите тип: mp3, raw, clean или notes")
         list_root = {
             "mp3": settings.source_dir,
             "raw": settings.raw_dir,
             "clean": settings.clean_dir,
+            "notes": settings.notes_dir,
         }[list_kind]
         if not list_root.exists():
             parser.error(f"Путь не найден: {list_root}")
@@ -730,7 +781,7 @@ def main(argv: list[str] | None = None) -> int:
     steps = None
     if args.steps:
         steps = {part.strip() for part in args.steps.split(",") if part.strip()}
-        unknown = steps - {"whisper", "clean", "summary"}
+        unknown = steps - {"whisper", "clean", "notes", "summary"}
         if unknown:
             parser.error(f"Неизвестные шаги: {', '.join(sorted(unknown))}")
 
@@ -770,6 +821,14 @@ def main(argv: list[str] | None = None) -> int:
                     filter_paths(raw_targets(path, settings), args.match),
                     force=args.force,
                     ollama=clean_ollama,
+                    prompts=prompts,
+                    settings=settings,
+                )
+            elif args.command == "notes":
+                run_notes(
+                    filter_paths(raw_targets(path, settings), args.match),
+                    force=args.force,
+                    ollama=OllamaClient(settings, model=settings.ollama_notes_model),
                     prompts=prompts,
                     settings=settings,
                 )

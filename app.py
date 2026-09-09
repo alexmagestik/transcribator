@@ -113,6 +113,7 @@ def _output_paths(mp3_abs: Path) -> dict[str, Path | None]:
         return {
             "raw": output_path_for_mp3(mp3_abs, _settings.raw_dir, ".txt", _settings),
             "clean": output_path_for_mp3(mp3_abs, _settings.clean_dir, ".txt", _settings),
+            "notes": output_path_for_mp3(mp3_abs, _settings.notes_dir, ".md", _settings),
             "summary": summary_path if summary_path.exists() else None,
         }
     except (ValueError, Exception):
@@ -157,6 +158,7 @@ def _build_tree() -> dict[str, Any]:
                     "size_mb": round(entry.stat().st_size / (1024 * 1024), 2),
                     "has_raw": bool(outs["raw"] and outs["raw"].exists()),
                     "has_clean": bool(outs["clean"] and outs["clean"].exists()),
+                    "has_notes": bool(outs["notes"] and outs["notes"].exists()),
                     "has_summary": bool(outs["summary"] and outs["summary"].exists()),
                 })
         return node
@@ -224,7 +226,7 @@ def api_run() -> Response:
     force = bool(body.get("force"))
     steps = (body.get("steps") or "").strip()
 
-    if command not in {"pipeline", "whisper", "clean", "summary"}:
+    if command not in {"pipeline", "whisper", "clean", "notes", "summary"}:
         return jsonify({"error": f"Неизвестная команда: {command!r}"}), 400
     if not target:
         return jsonify({"error": "Не указан path"}), 400
@@ -389,10 +391,12 @@ def api_config() -> Response:
         "source_dir": str(_settings.source_dir),
         "raw_dir": str(_settings.raw_dir),
         "clean_dir": str(_settings.clean_dir),
+        "notes_dir": str(_settings.notes_dir),
         "summary_dir": str(_settings.summary_dir),
         "status_file": str(_settings.status_file),
         "ollama_host": _settings.ollama_host,
         "ollama_clean_model": _settings.ollama_clean_model,
+        "ollama_notes_model": _settings.ollama_notes_model,
         "ollama_summary_model": _settings.ollama_summary_model,
         "whisper_model": _settings.whisper_model,
     })
@@ -412,8 +416,8 @@ def api_view() -> Response:
     rel_path = request.args.get("path", "").strip()
     mp3_rel = request.args.get("mp3", "").strip()
     kind = request.args.get("kind", "").strip()
-    if kind not in {"raw", "clean", "summary"}:
-        return jsonify({"error": f"kind должен быть raw|clean|summary, не {kind!r}"}), 400
+    if kind not in {"raw", "clean", "notes", "summary"}:
+        return jsonify({"error": f"kind должен быть raw|clean|notes|summary, не {kind!r}"}), 400
     if not rel_path and not mp3_rel:
         return jsonify({"error": "Не указан path или mp3"}), 400
 
@@ -432,9 +436,10 @@ def api_view() -> Response:
         target_dir = {
             "raw": _settings.raw_dir,
             "clean": _settings.clean_dir,
+            "notes": _settings.notes_dir,
             "summary": _settings.summary_dir,
         }[kind]
-        ext = ".md" if kind == "summary" else ".txt"
+        ext = ".md" if kind in {"summary", "notes"} else ".txt"
         if kind == "summary":
             # Логика как в run_summary: summary/<имя_папки>.md
             src = _settings.source_dir.resolve()
@@ -454,17 +459,18 @@ def api_view() -> Response:
     if not abs_path.exists():
         return jsonify({"error": f"Файл не найден: {abs_path.name}"}), 404
 
-    # Безопасность: только внутри raw/clean/summary
+    # Безопасность: только внутри raw/clean/notes/summary
     allowed = {
         "raw": _settings.raw_dir.resolve(),
         "clean": _settings.clean_dir.resolve(),
+        "notes": _settings.notes_dir.resolve(),
         "summary": _settings.summary_dir.resolve(),
     }
     if allowed[kind] not in abs_path.resolve().parents:
         return jsonify({"error": f"Путь должен быть внутри {allowed[kind]}"}), 403
 
     text = abs_path.read_text(encoding="utf-8", errors="replace")
-    if kind == "summary":
+    if kind in {"summary", "notes"}:
         try:
             html = md_lib.markdown(text, extensions=["fenced_code", "tables"])
         except Exception as exc:  # noqa: BLE001
