@@ -475,8 +475,38 @@ def api_view() -> Response:
             html = md_lib.markdown(text, extensions=["fenced_code", "tables"])
         except Exception as exc:  # noqa: BLE001
             return jsonify({"text": text, "html": None, "error": str(exc)})
-        return jsonify({"text": text, "html": html})
-    return jsonify({"text": text})
+        return jsonify({"text": text, "html": html, "path": str(abs_path)})
+    return jsonify({"text": text, "path": str(abs_path)})
+
+
+@app.post("/api/save")
+def api_save() -> Response:
+    body = request.get_json(silent=True) or {}
+    abs_path_str = body.get("path", "").strip()
+    content = body.get("content", "")
+
+    if not abs_path_str:
+        return jsonify({"error": "Не указан путь к файлу"}), 400
+
+    abs_path = Path(abs_path_str).resolve()
+
+    # Безопасность: только внутри raw/clean/notes/summary
+    allowed = {
+        "raw": _settings.raw_dir.resolve(),
+        "clean": _settings.clean_dir.resolve(),
+        "notes": _settings.notes_dir.resolve(),
+        "summary": _settings.summary_dir.resolve(),
+    }
+
+    if not any(root in abs_path.parents for root in allowed.values()):
+        return jsonify({"error": "Запись в этот путь запрещена"}), 403
+
+    try:
+        abs_path.write_text(content, encoding="utf-8")
+    except Exception as exc:
+        return jsonify({"error": f"Ошибка при сохранении: {exc}"}), 500
+
+    return jsonify({"ok": True})
 
 
 # ---------------------------------------------------------------------------

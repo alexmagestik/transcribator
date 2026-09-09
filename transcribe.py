@@ -389,14 +389,20 @@ def run_clean(
 
         set_step("clean")
         set_current_file(txt_path)
-        text = read_text(txt_path)
         log.info("Clean-модель: %s", ollama.model)
+
+        # Расчёт размера чанка с учётом промпта (контекст 32к)
+        prompt_len = len(prompts.clear)
+        effective_chunk_size = max(1000, 32000 - prompt_len)
+
+        text = read_text(txt_path)
         cleaned = ollama.process_long_text(
             prompts.clear,
             text,
             "Очистка",
             temperature=settings.ollama_temperature_clean,
             user_template=prompts.clear_user,
+            chunk_size=effective_chunk_size,
         )
         write_text(output_path, cleaned)
         log.info("Сохранено: %s", output_path)
