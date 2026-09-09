@@ -334,7 +334,6 @@ async function pollStatus() {
       if (lastExit === 0) {
         text.textContent = 'готово';
         pill.classList.add('running');
-        setTimeout(() => pollStatus(), 800); // ещё раз, чтоб вернулось в idle
       } else if (lastExit != null) {
         pill.className = 'status-pill error';
         text.textContent = `ошибка (exit ${lastExit})`;
@@ -344,7 +343,6 @@ async function pollStatus() {
       setRunButtonsDisabled(false);
       if (wasRunning) {
         stopSSE();
-        // перечитать дерево — могли появиться новые артефакты
         await loadTree();
         if (state.selected) await refreshTabsForSelected();
       }
@@ -549,9 +547,7 @@ async function openFile(node, preferredKind = null) {
 
 async function refreshTabsForSelected() {
   if (!state.selected) return;
-  // обновить бейджи и доступность вкладок
-  await loadTree();
-  // найти выбранный узел в новом дереве
+  // Дерево уже обновлено в pollStatus перед вызовом этой функции
   const found = findNode(state.tree, state.selected.rel);
   if (found) {
     state.selected = found;
@@ -629,7 +625,7 @@ async function runOnNode(node, command) {
 
 async function runRerunStep() {
   if (!state.selected || !state.activeTab) return;
-  const step = state.activeTab; // 'raw' | 'clean' | 'summary'
+  const step = state.activeTab; // 'raw' | 'clean' | 'notes' | 'summary'
   await runOnNode(state.selected, step === 'raw' ? 'whisper' : step);
 }
 
@@ -697,7 +693,7 @@ $('#btn-rerun-step').onclick = runRerunStep;
   await loadConfig();
   await loadTree();
   await pollStatus();
-  statusTimer = setInterval(pollStatus, 2000);
+  statusTimer = setInterval(pollStatus, 3000);
 })();
 </script>
 </body>
