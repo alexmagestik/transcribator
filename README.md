@@ -19,16 +19,20 @@
 - **быстро понять суть** без перемотки — структурированное итоговое саммари;
 - **не платить** облачным сервисам и **не сливать** контент в чужие API.
 
-Transcribator берёт папку с MP3 и за один прогон выдаёт четыре артефакта:
+Transcribator берёт папку с MP3 и создаёт набор артефактов по следующей схеме:
 
 ```
 source-mp3/.../Лекция.mp3
-        ↓  Whisper Large-v3 (CPU, faster-whisper)
-raw/.../Лекция.txt              ← «как распознал», с таймкодами
-        ↓  Ollama (llama3.1-clean-32k)      ↓  Ollama (gemma4:e2b-32k)
-clean/.../Лекция.txt            ← чистый текст            notes/.../Лекция.md
-        ↓  Ollama (gemma4:e2b-32k)          ← подробный учебный конспект
-summary/.../Лекция.md           ← структурированный итоговый материал
+        ↓  Whisper Large-v3
+raw/.../Лекция.txt (Сырая расшифровка с таймкодами)
+        ↙                 ↘
+   Ollama (Clean)      Ollama (Notes)
+        ↓                   ↓
+clean/.../Лекция.txt   notes/.../Лекция.md (Подробный конспект)
+        ↓
+   Ollama (Summary)
+        ↓
+summary/.../Лекция.md (Итоговый структурированный материал)
 ```
 
 ![Процесс работы](images/transcribator_process.png)
@@ -102,7 +106,7 @@ Apache Kafka — это open-source система для обмена сооб�
 ### 2. Клонирование и зависимости
 
 ```bash
-git clone <repo-url> transcribator
+git clone https://github.com/alexmagestik/transcribator.git
 cd transcribator
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -127,7 +131,7 @@ curl http://127.0.0.1:11434/api/tags
 ./.venv/bin/python app.py
 ```
 
-Откройте в браузере: **http://127.0.0.1:8765**
+Откройте в браузере: **http://127.0.0.1:11434**
 
 В UI вы увидите:
 

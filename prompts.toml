@@ -129,7 +129,8 @@ Gemma, LangChain, Hugging Face, ZooKeeper, backend, frontend, pipeline,
 embedding, vector database, LLM, ETL, Zoom, ChatGPT, dbt, Flink, Debezium, 
 Kafka Streams, Postgres, SLA, e-mail, VPS, MLOps, Confluence, DataOps, 
 pooling, consumer, producer, worker, raw, protobuf, Grafana, topic, partition, 
-offset, consumer group 
+offset, consumer group, pooling, Write Ahead Log, WAL, CDC, SCD, recovery,
+null, DDL, Java, Oracle, JVM, snapshot, transaction
 
 Примеры исправлений:
 > пайтон → Python

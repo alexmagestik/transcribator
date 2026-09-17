@@ -181,6 +181,12 @@
     border: 1px solid var(--border); border-radius: 6px;
     padding: 12px; resize: none; outline: none;
   }
+  .viewer-info {
+    padding: 8px 20px; border-bottom: 1px solid var(--border);
+    background: var(--bg-2); display: flex; justify-content: space-between;
+    align-items: center; font-size: 12px; color: var(--fg-dim);
+  }
+  .viewer-info .filename { font-weight: 600; color: var(--fg); }
 </style>
 </head>
 <body>
@@ -216,6 +222,7 @@
         <button id="btn-rerun-step" disabled>Re-run this step</button>
       </div>
     </div>
+    <div class="viewer-info" id="viewer-info" style="display:none"></div>
     <div class="viewer" id="viewer">
       <div class="empty">Выберите MP3-файл слева.</div>
     </div>
@@ -286,7 +293,7 @@ async function loadConfig() {
   const paths = $('#header-paths');
   paths.innerHTML = '';
   for (const [label, key] of [
-    ['source', 'source_dir'], ['raw', 'raw_dir'], ['clean', 'clean_dir'], ['summary', 'summary_dir'],
+    ['source', 'source_dir'], ['raw', 'raw_dir'], ['clean', 'clean_dir'], ['notes', 'notes_dir'], ['summary', 'summary_dir'],
   ]) {
     const span = document.createElement('span');
     span.innerHTML = `${label} <code>${state.config[key]}</code>`;
@@ -297,6 +304,7 @@ async function loadConfig() {
   for (const [label, key] of [
     ['whisper', 'whisper_model'],
     ['ollama clean', 'ollama_clean_model'],
+    ['ollama notes', 'ollama_notes_model'],
     ['ollama summary', 'ollama_summary_model'],
     ['ollama host', 'ollama_host'],
   ]) {
@@ -484,7 +492,7 @@ function renderNode(node, isRoot) {
 
     const size = document.createElement('span');
     size.className = 'size';
-    size.textContent = `${node.size_mb} MB`;
+    size.textContent = `${(node.size_mb * 1024).toFixed(1)} KB`;
     row.appendChild(size);
 
     for (const kind of ['raw', 'clean', 'notes']) {
@@ -636,14 +644,25 @@ async function loadView() {
   try {
     const data = await api(`/api/view?mp3=${encodeURIComponent(node.rel)}&kind=${kind}`);
     const viewer = $('#viewer');
+    const info = $('#viewer-info');
+
     state.viewPath = data.path;
     state.viewContent = data.text || '';
+
+    const filename = data.path ? data.path.split('/').pop() : node.name;
+    info.style.display = 'flex';
+    info.innerHTML = `
+      <span class="filename">${filename}</span>
+      <span>${kind} ${data.size_kb ? `(${data.size_kb} KB)` : ''}</span>
+    `;
+
     if (kind === 'summary' && data.html) {
       viewer.innerHTML = `<div class="md-body">${data.html}</div>`;
     } else {
       viewer.innerHTML = `<pre>${escapeHtml(data.text || '')}</pre>`;
     }
   } catch (e) {
+    $('#viewer-info').style.display = 'none';
     $('#viewer').innerHTML = `<div class="empty" style="color: var(--red)">Ошибка: ${escapeHtml(e.message)}</div>`;
   }
 }

@@ -384,6 +384,7 @@ def run_clean(
 
         set_step("clean")
         set_current_file(txt_path)
+        log.info("Обработка файла: %s", txt_path.name)
         log.info("Clean-модель: %s", ollama.model)
 
         # Расчёт размера чанка с учётом промпта (контекст 32к)
@@ -472,6 +473,7 @@ def run_notes(
 
         set_step("notes")
         set_current_file(txt_path)
+        log.info("Обработка файла: %s", txt_path.name)
         log.info("Notes-модель: %s", ollama.model)
 
         # Расчёт размера чанка с учётом промпта (контекст 32к)

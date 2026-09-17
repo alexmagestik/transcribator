@@ -470,13 +470,14 @@ def api_view() -> Response:
         return jsonify({"error": f"Путь должен быть внутри {allowed[kind]}"}), 403
 
     text = abs_path.read_text(encoding="utf-8", errors="replace")
+    file_size_kb = round(abs_path.stat().st_size / 1024, 1)
     if kind in {"summary", "notes"}:
         try:
             html = md_lib.markdown(text, extensions=["fenced_code", "tables"])
         except Exception as exc:  # noqa: BLE001
             return jsonify({"text": text, "html": None, "error": str(exc)})
-        return jsonify({"text": text, "html": html, "path": str(abs_path)})
-    return jsonify({"text": text, "path": str(abs_path)})
+        return jsonify({"text": text, "html": html, "path": str(abs_path), "size_kb": file_size_kb})
+    return jsonify({"text": text, "path": str(abs_path), "size_kb": file_size_kb})
 
 
 @app.post("/api/save")
