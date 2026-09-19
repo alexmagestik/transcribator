@@ -521,7 +521,7 @@ function renderNode(node, isRoot) {
       $$('.node.selected').forEach(n => n.classList.remove('selected'));
       row.classList.add('selected');
       state.selected = node;
-      openFile(node, 'raw');
+      openFile(node);
     };
   }
   return li;
@@ -548,13 +548,19 @@ async function openFile(node, preferredKind = null) {
     const on = node[`has_${kind}`];
     t.classList.toggle('disabled', !on);
   }
-  // выбрать вкладку: сначала приоритетную, затем по порядку
+  // выбрать вкладку:
+  // 1. Если есть приоритетная (preferredKind) и она доступна
+  // 2. Если текущая активная вкладка доступна для нового файла — оставляем её
+  // 3. Иначе — по списку приоритетов
   let chosen = preferredKind;
   if (chosen && !node[`has_${chosen}`]) {
     chosen = null;
   }
+  if (!chosen && state.activeTab && node[`has_${state.activeTab}`]) {
+    chosen = state.activeTab;
+  }
   if (!chosen) {
-    const order = ['summary', 'notes', 'clean', 'raw'];
+    const order = ['raw', 'clean', 'notes', 'summary'];
     for (const k of order) {
       if (node[`has_${k}`]) { chosen = k; break; }
     }
@@ -656,7 +662,7 @@ async function loadView() {
       <span>${kind} ${data.size_kb ? `(${data.size_kb} KB)` : ''}</span>
     `;
 
-    if (kind === 'summary' && data.html) {
+    if ((kind === 'summary' || kind === 'notes') && data.html) {
       viewer.innerHTML = `<div class="md-body">${data.html}</div>`;
     } else {
       viewer.innerHTML = `<pre>${escapeHtml(data.text || '')}</pre>`;
