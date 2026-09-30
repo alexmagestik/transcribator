@@ -50,6 +50,7 @@ class Settings:
     notes_dir: Path
     prompts_file: Path
     status_file: Path
+    vk_token: str | None
 
     ollama_host: str
     ollama_model: str
@@ -92,6 +93,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
         notes_dir=_env_path("NOTES_DIR", "notes"),
         prompts_file=_env_path("PROMPTS_FILE", "prompts.toml"),
         status_file=_env_path("STATUS_FILE", ".transcribe-status.json"),
+        vk_token=os.getenv("VK_TOKEN"),
         ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
         ollama_model=os.getenv("OLLAMA_MODEL", "qwen3:4b-summary-32k"),
         ollama_clean_model=os.getenv(

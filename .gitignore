@@ -2,6 +2,7 @@
 .env
 .chunks/
 .idea/
+.vkbottle/
 .transcribe-status.json
 __pycache__/
 *.pyc
