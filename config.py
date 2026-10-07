@@ -51,6 +51,7 @@ class Settings:
     prompts_file: Path
     status_file: Path
     vk_token: str | None
+    supported_extensions: list[str]
 
     ollama_host: str
     ollama_model: str
@@ -85,6 +86,11 @@ class Prompts:
 
 def load_settings(env_file: Path | None = None) -> Settings:
     load_dotenv(env_file or BASE_DIR / ".env")
+
+    # Загрузка поддерживаемых расширений
+    exts_raw = os.getenv("SUPPORTED_EXTENSIONS", "mp3,wav,m4a,flac,mp4,mkv,mov,avi")
+    supported_extensions = [e.strip().lower() for e in exts_raw.split(",") if e.strip()]
+
     return Settings(
         source_dir=_env_path("SOURCE_DIR", "source-mp3"),
         raw_dir=_env_path("RAW_DIR", "raw"),
@@ -94,6 +100,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
         prompts_file=_env_path("PROMPTS_FILE", "prompts.toml"),
         status_file=_env_path("STATUS_FILE", ".transcribe-status.json"),
         vk_token=os.getenv("VK_TOKEN"),
+        supported_extensions=supported_extensions,
         ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
         ollama_model=os.getenv("OLLAMA_MODEL", "qwen3:4b-summary-32k"),
         ollama_clean_model=os.getenv(

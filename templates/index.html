@@ -492,7 +492,12 @@ function renderNode(node, isRoot) {
 
     const size = document.createElement('span');
     size.className = 'size';
-    size.textContent = `${(node.size_mb * 1024).toFixed(1)} KB`;
+    const sizeMb = node.size_mb;
+    if (node.name.toLowerCase().endsWith('.mp3')) {
+      size.textContent = `${sizeMb.toFixed(2)} MB`;
+    } else {
+      size.textContent = `${(sizeMb * 1024).toFixed(1)} KB`;
+    }
     row.appendChild(size);
 
     for (const kind of ['raw', 'clean', 'notes']) {

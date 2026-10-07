@@ -60,18 +60,22 @@ def resolve_source_root(path: Path, settings: Settings) -> Path:
     raise ValueError(f"Путь должен находиться внутри {settings.source_dir}: {path}")
 
 
-def collect_mp3_files(path: Path) -> list[Path]:
+def collect_media_files(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
     if path.is_file():
-        if path.suffix.lower() != ".mp3":
-            raise ValueError(f"Ожидается MP3-файл: {path}")
+        if path.suffix.lower().lstrip('.') not in settings.supported_extensions:
+            raise ValueError(f"Неподдерживаемый формат файла: {path.suffix}")
         return [path]
     if not path.is_dir():
         raise FileNotFoundError(f"Путь не найден: {path}")
 
-    files = sorted(path.rglob("*.mp3"))
+    files = []
+    for p in sorted(path.rglob("*")):
+        if p.suffix.lower().lstrip('.') in settings.supported_extensions:
+            files.append(p)
+
     if not files:
-        raise ValueError(f"MP3-файлы не найдены в {path}")
+        raise ValueError(f"Медиафайлы не найдены в {path}")
     return files
 
 
@@ -90,9 +94,9 @@ def collect_txt_files(path: Path, suffix: str) -> list[Path]:
     return files
 
 
-def output_path_for_mp3(mp3_path: Path, output_root: Path, extension: str, settings: Settings) -> Path:
-    source_root = resolve_source_root(mp3_path, settings)
-    rel = mp3_path.resolve().relative_to(source_root)
+def output_path_for_media(media_path: Path, output_root: Path, extension: str, settings: Settings) -> Path:
+    source_root = resolve_source_root(media_path, settings)
+    rel = media_path.resolve().relative_to(source_root)
     return output_root / rel.with_suffix(extension)
 
 
@@ -350,15 +354,15 @@ def run_whisper(
     transcriber = WhisperTranscriber(settings, prompts)
     written: list[Path] = []
 
-    for mp3_path in paths:
-        output_path = output_path_for_mp3(mp3_path, settings.raw_dir, ".txt", settings)
+    for media_path in paths:
+        output_path = output_path_for_media(media_path, settings.raw_dir, ".txt", settings)
         if should_skip(output_path, force):
             log.info("Пропуск (уже есть): %s", output_path)
             continue
 
         set_step("whisper")
-        set_current_file(mp3_path)
-        text = transcriber.transcribe(mp3_path)
+        set_current_file(media_path)
+        text = transcriber.transcribe(media_path)
         write_text(output_path, text)
         log.info("Сохранено: %s", output_path)
         written.append(output_path)
@@ -384,7 +388,7 @@ def run_clean(
 
         set_step("clean")
         set_current_file(txt_path)
-        log.info("Обработка файла: %s", txt_path.name)
+        log.info("Обработка файла из %s: %s", settings.raw_dir.name, txt_path.name)
         log.info("Clean-модель: %s", ollama.model)
 
         # Расчёт размера чанка с учётом промпта (контекст 32к)
@@ -439,6 +443,7 @@ def run_summary(
 
         set_step("summary")
         set_current_file(group_path)
+        log.info("Обработка папки из %s: %s", settings.clean_dir.name, folder_name)
         log.info("Summary-модель: %s", ollama.model)
 
         summary = ollama.summarize_long_text(
@@ -473,7 +478,7 @@ def run_notes(
 
         set_step("notes")
         set_current_file(txt_path)
-        log.info("Обработка файла: %s", txt_path.name)
+        log.info("Обработка файла из %s: %s", settings.clean_dir.name, txt_path.name)
         log.info("Notes-модель: %s", ollama.model)
 
         # Расчёт размера чанка с учётом промпта (контекст 32к)
@@ -496,17 +501,17 @@ def run_notes(
 
 
 
-def mp3_targets(path: Path, settings: Settings) -> list[Path]:
+def media_targets(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
-    if path.suffix.lower() == ".mp3":
+    if path.suffix.lower().lstrip('.') in settings.supported_extensions:
         resolve_source_root(path, settings)
         return [path]
     if path.is_dir():
-        return collect_mp3_files(path)
-    raise ValueError(f"Для шага Whisper нужен MP3-файл или папка: {path}")
+        return collect_media_files(path, settings)
+    raise ValueError(f"Для шага Whisper нужен медиафайл или папка: {path}")
 
 
-def raw_targets(path: Path, settings: Settings) -> list[Path]:
+def clean_targets(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
     if path.suffix.lower() == ".mp3":
         return [output_path_for_mp3(path, settings.raw_dir, ".txt", settings)]
@@ -573,18 +578,18 @@ def run_pipeline(
     mp3_files: list[Path] | None = None,
 ) -> None:
     selected = steps or {"whisper", "clean", "notes", "summary"}
-    mp3_files = mp3_files or mp3_targets(path, settings)
+    media_files = mp3_files or media_targets(path, settings)
 
     # Если запуск для одного файла (а не папки), отключаем summary по умолчанию
-    if path.is_file() and len(mp3_files) == 1 and steps is None:
+    if path.is_file() and len(media_files) == 1 and steps is None:
         selected = {"whisper", "clean", "notes"}
 
     if "whisper" in selected:
         set_step("whisper")
-        run_whisper(mp3_files, force=force, settings=settings, prompts=prompts)
+        run_whisper(media_files, force=force, settings=settings, prompts=prompts)
 
     raw_files = [
-        output_path_for_mp3(mp3, settings.raw_dir, ".txt", settings) for mp3 in mp3_files
+        output_path_for_media(media, settings.raw_dir, ".txt", settings) for media in media_files
     ]
     missing_raw = [p for p in raw_files if not p.exists()]
     if "clean" in selected and missing_raw:
@@ -598,10 +603,14 @@ def run_pipeline(
     if "notes" in selected:
         set_step("notes")
         notes_ollama = OllamaClient(settings, model=settings.ollama_notes_model)
-        run_notes(raw_files, force=force, ollama=notes_ollama, prompts=prompts, settings=settings)
+        # Для конспекта используем clean-файлы вместо raw
+        clean_files_for_notes = [
+            output_path_for_media(media, settings.clean_dir, ".txt", settings) for media in media_files
+        ]
+        run_notes(clean_files_for_notes, force=force, ollama=notes_ollama, prompts=prompts, settings=settings)
 
     clean_files = [
-        output_path_for_mp3(mp3, settings.clean_dir, ".txt", settings) for mp3 in mp3_files
+        output_path_for_media(media, settings.clean_dir, ".txt", settings) for media in media_files
     ]
     missing_clean = [p for p in clean_files if not p.exists()]
     if "summary" in selected and missing_clean:
@@ -700,6 +709,7 @@ def apply_cli_overrides(settings: Settings, args: argparse.Namespace) -> Setting
         notes_dir=settings.notes_dir,
         prompts_file=settings.prompts_file,
         status_file=settings.status_file,
+        vk_token=settings.vk_token,
         ollama_host=args.ollama_host,
         ollama_model=args.ollama_model,
         ollama_clean_model=args.ollama_clean_model,
@@ -801,9 +811,9 @@ def main(argv: list[str] | None = None) -> int:
             allow_parallel=args.force,
         ):
             if args.command == "pipeline":
-                mp3_files = filter_paths(mp3_targets(path, settings), args.match)
-                if not mp3_files:
-                    raise ValueError("Нет MP3-файлов для обработки")
+                media_files = filter_paths(media_targets(path, settings), args.match)
+                if not media_files:
+                    raise ValueError("Медиафайлы не найдены для обработки")
                 run_pipeline(
                     path,
                     force=args.force,
@@ -811,18 +821,18 @@ def main(argv: list[str] | None = None) -> int:
                     prompts=prompts,
                     settings=settings,
                     steps=steps,
-                    mp3_files=mp3_files,
+                    mp3_files=media_files,
                 )
             elif args.command == "whisper":
                 run_whisper(
-                    filter_paths(mp3_targets(path, settings), args.match),
+                    filter_paths(media_targets(path, settings), args.match),
                     force=args.force,
                     settings=settings,
                     prompts=prompts,
                 )
             elif args.command == "clean":
                 run_clean(
-                    filter_paths(raw_targets(path, settings), args.match),
+                    filter_paths(clean_targets(path, settings), args.match),
                     force=args.force,
                     ollama=clean_ollama,
                     prompts=prompts,
@@ -830,7 +840,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             elif args.command == "notes":
                 run_notes(
-                    filter_paths(raw_targets(path, settings), args.match),
+                    filter_paths(inputs_for_summary(path, settings), args.match),
                     force=args.force,
                     ollama=OllamaClient(settings, model=settings.ollama_notes_model),
                     prompts=prompts,

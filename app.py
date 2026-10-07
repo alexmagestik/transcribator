@@ -99,7 +99,7 @@ def _output_paths(mp3_abs: Path) -> dict[str, Path | None]:
     """Строит абсолютные пути raw/clean/summary для MP3, импортируя
     функции из transcribe.py. Если путь вне SOURCE_DIR — вернёт None."""
     try:
-        from transcribe import output_path_for_mp3  # noqa: PLC0415
+        from transcribe import output_path_for_media  # noqa: PLC0415
 
         rel = mp3_abs.resolve()
         src = _settings.source_dir.resolve()
@@ -111,13 +111,13 @@ def _output_paths(mp3_abs: Path) -> dict[str, Path | None]:
         summary_path = _settings.summary_dir / f"{folder_name}.md"
 
         return {
-            "raw": output_path_for_mp3(mp3_abs, _settings.raw_dir, ".txt", _settings),
-            "clean": output_path_for_mp3(mp3_abs, _settings.clean_dir, ".txt", _settings),
-            "notes": output_path_for_mp3(mp3_abs, _settings.notes_dir, ".md", _settings),
+            "raw": output_path_for_media(mp3_abs, _settings.raw_dir, ".txt", _settings),
+            "clean": output_path_for_media(mp3_abs, _settings.clean_dir, ".txt", _settings),
+            "notes": output_path_for_media(mp3_abs, _settings.notes_dir, ".md", _settings),
             "summary": summary_path if summary_path.exists() else None,
         }
     except (ValueError, Exception):
-        return {"raw": None, "clean": None, "summary": None}
+        return {"raw": None, "clean": None, "notes": None, "summary": None}
 
 
 def _build_tree() -> dict[str, Any]:
@@ -149,7 +149,7 @@ def _build_tree() -> dict[str, Any]:
             entry_rel = rel / entry.name
             if entry.is_dir():
                 node["children"].append(walk(entry, entry_rel))
-            elif entry.is_file() and entry.suffix.lower() == ".mp3":
+            elif entry.is_file() and entry.suffix.lower().lstrip('.') in _settings.supported_extensions:
                 outs = _output_paths(entry)
                 node["children"].append({
                     "name": entry.name,
@@ -424,7 +424,7 @@ def api_view() -> Response:
     if mp3_rel:
         # Путь относительно source-mp3 (например, "Занятие 2. Apache Kafka/...part01.mp3")
         try:
-            from transcribe import output_path_for_mp3  # noqa: PLC0415
+            from transcribe import output_path_for_media  # noqa: PLC0415
         except Exception as exc:  # noqa: BLE001
             return jsonify({"error": f"Не удалось импортировать transcribe: {exc}"}), 500
         mp3_abs = (_settings.source_dir / mp3_rel).resolve()
@@ -449,7 +449,7 @@ def api_view() -> Response:
                 folder_name = mp3_abs.parent.name if mp3_abs.parent != src else "root"
             abs_path = _settings.summary_dir / f"{folder_name}.md"
         else:
-            abs_path = output_path_for_mp3(mp3_abs, target_dir, ext, _settings)
+            abs_path = output_path_for_media(mp3_abs, target_dir, ext, _settings)
 
 
     else:
