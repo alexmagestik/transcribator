@@ -514,14 +514,14 @@ def media_targets(path: Path, settings: Settings) -> list[Path]:
 def clean_targets(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
     if path.suffix.lower() == ".mp3":
-        return [output_path_for_mp3(path, settings.raw_dir, ".txt", settings)]
+        return [output_path_for_media(path, settings.raw_dir, ".txt", settings)]
     if path.suffix.lower() == ".txt":
         return [path]
     if path.is_dir():
         if path.resolve() == settings.source_dir.resolve() or settings.source_dir.resolve() in path.parents:
             return [
-                output_path_for_mp3(mp3, settings.raw_dir, ".txt", settings)
-                for mp3 in collect_mp3_files(path)
+                output_path_for_media(mp3, settings.raw_dir, ".txt", settings)
+                for mp3 in collect_media_files(path, settings)
             ]
         return collect_txt_files(path, ".txt")
     raise ValueError(f"Для шага clean нужен raw.txt, MP3 или папка: {path}")
@@ -530,7 +530,7 @@ def clean_targets(path: Path, settings: Settings) -> list[Path]:
 def inputs_for_summary(path: Path, settings: Settings) -> list[Path]:
     path = path.resolve()
     if path.suffix.lower() == ".mp3":
-        return [output_path_for_mp3(path, settings.clean_dir, ".txt", settings)]
+        return [output_path_for_media(path, settings.clean_dir, ".txt", settings)]
     if path.suffix.lower() == ".txt":
         if settings.raw_dir.resolve() in path.parents:
             return [output_path_for_txt(path, settings.clean_dir, ".txt", settings)]
@@ -538,8 +538,8 @@ def inputs_for_summary(path: Path, settings: Settings) -> list[Path]:
     if path.is_dir():
         if path.resolve() == settings.source_dir.resolve() or settings.source_dir.resolve() in path.parents:
             return [
-                output_path_for_mp3(mp3, settings.clean_dir, ".txt", settings)
-                for mp3 in collect_mp3_files(path)
+                output_path_for_media(mp3, settings.clean_dir, ".txt", settings)
+                for mp3 in collect_media_files(path, settings)
             ]
         if path.resolve() == settings.raw_dir.resolve() or settings.raw_dir.resolve() in path.parents:
             return [
@@ -554,7 +554,7 @@ def list_targets(command: str, path: Path, settings: Settings) -> list[Path]:
     if command == "mp3":
         if path.is_file():
             return mp3_targets(path, settings)
-        return collect_mp3_files(path)
+        return collect_media_files(path, settings)
     if command == "raw":
         return raw_targets(path, settings)
     if command == "clean":
@@ -710,6 +710,7 @@ def apply_cli_overrides(settings: Settings, args: argparse.Namespace) -> Setting
         prompts_file=settings.prompts_file,
         status_file=settings.status_file,
         vk_token=settings.vk_token,
+        supported_extensions=settings.supported_extensions,
         ollama_host=args.ollama_host,
         ollama_model=args.ollama_model,
         ollama_clean_model=args.ollama_clean_model,

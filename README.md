@@ -1,10 +1,10 @@
 # Transcribator
 
-**Локальный пайплайн транскрибации аудио: MP3 → черновик → чистый текст → подробный конспект → итоговое саммари.**
+**Локальный пайплайн транскрибации аудио и видео: MP3/MP4/MKV → черновик → чистый текст → подробный конспект → итоговое саммари.**
 
 Полностью офлайн: распознавание речи через [Whisper Large-v3](https://github.com/SYSTRAN/faster-whisper),
 а очистка, конспектирование и суммаризация — через локальные LLM в [Ollama](https://ollama.com).
-Никакие аудио или тексты не покидают машину.
+Никакие медиафайлы или тексты не покидают машину.
 
 ![Результат транскрибации](images/transcribator_result.png)
 
@@ -12,7 +12,7 @@
 
 ## Что это решает
 
-У вас есть часовые лекции, подкасты или записи совещаний в MP3. Хочется:
+У вас есть лекции, подкасты, видеозаписи совещаний или голосовые сообщения. Хочется:
 
 - **читать** их как обычный текст (с таймкодами или без);
 - **иметь подробный конспект** с сохранением всех технических деталей и примеров;
@@ -20,10 +20,10 @@
 - **автоматически расшифровывать голосовые сообщения** из сообщества ВКонтакте;
 - **не платить** облачным сервисам и **не сливать** контент в чужие API.
 
-Transcribator берёт папку с MP3 и создаёт набор артефактов по следующей схеме:
+Transcribator берёт папку с медиафайлами и создаёт набор артефактов по следующей схеме:
 
 ```
-source-mp3/.../Лекция.mp3
+source-mp3/.../Лекция.mp4
         ↓  Whisper Large-v3
 raw/.../Лекция.txt (Сырая расшифровка с таймкодами)
         ↙                 ↘
@@ -40,14 +40,14 @@ summary/.../Лекция.md (Итоговый структурированный
 
 ## Для кого
 
-- Студенты и преподаватели, которые работают с длинными аудиолекциями.
+- Студенты и преподаватели, которые работают с длинными аудио/видео лекциями.
 - Подкастеры, которые хотят текстовую расшифровку и краткое содержание выпусков.
 - Команды, которые ведут аудио-протоколы встреч и хотят searchable-архив.
 - Разработчики, которые хотят локальный self-hosted STT + summarization без API-ключей.
 
 ## Основная функция
 
-- **Просмотр библиотеки** аудиофайлов в виде дерева папок с индикаторами
+- **Просмотр библиотеки** медиафайлов в виде дерева папок с индикаторами
   «обработано / не обработано» по каждому из четырёх шагов.
 - **Запуск пайплайна** на отдельный файл, на папку или на всё сразу — одной кнопкой.
 - **Перезапуск отдельного шага** (например, только clean или notes) без повторной обработки Whisper.
@@ -71,7 +71,7 @@ summary/.../Лекция.md (Итоговый структурированный
 и разберём, как она устроена изнутри.
 ```
 
-**`notes/*.md`** — подробный учебный конспект (создаётся из raw):
+**`notes/*.md`** — подробный учебный конспект (создаётся из clean):
 ```markdown
 ## Архитектура Kafka
 Преподаватель подробно разбирает механизм работы брокера... 
@@ -157,7 +157,7 @@ curl http://127.0.0.1:11434/api/tags
 .venv/bin/python transcribe.py pipeline source-mp3
 
 # Только конкретный файл
-.venv/bin/python transcribe.py pipeline source-mp3/Лекция.mp3
+.venv/bin/python transcribe.py pipeline source-mp3/Лекция.mp4
 
 # Только один шаг — whisper / clean / notes / summary
 .venv/bin/python transcribe.py whisper source-mp3 --match "Part12"
@@ -181,7 +181,7 @@ transcribator/
 ├── requirements.txt            # faster-whisper, flask, markdown, python-dotenv, vkbottle, certifi
 ├── env.example                 # Шаблон .env (скопировать в .env)
 │
-├── source-mp3/                 # ← положите сюда ваши MP3
+├── source-mp3/                 # ← положите сюда ваши медиафайлы
 ├── raw/                        # ← Whisper-транскрипты (создаются)
 ├── clean/                      # ← очищенные тексты (создаются)
 ├── notes/                      # ← подробные конспекты (создаются)
@@ -215,11 +215,12 @@ transcribator/
 
 | Переменная | Что делает | По умолчанию |
 |---|---|---|
-| `SOURCE_DIR` | Папка с исходными MP3 | `source-mp3` |
+| `SOURCE_DIR` | Папка с исходными медиафайлами | `source-mp3` |
 | `RAW_DIR` | Куда писать Whisper-транскрипты | `raw` |
 | `CLEAN_DIR` | Куда писать очищенный текст | `clean` |
 | `NOTES_DIR` | Куда писать подробные конспекты | `notes` |
 | `SUMMARY_DIR` | Куда писать саммари | `summary` |
+| `SUPPORTED_EXTENSIONS` | Форматы файлов для обработки | `mp3,wav,m4a,flac,mp4,mkv,mov,avi` |
 | `VK_TOKEN` | Токен сообщества ВКонтакте | — |
 | `OLLAMA_HOST` | Адрес Ollama | `http://127.0.0.1:11434` |
 | `OLLAMA_CLEAN_MODEL` | Модель для шага clean | `llama3.1-clean-32k:latest` |
@@ -229,6 +230,8 @@ transcribator/
 | `WHISPER_DEVICE` | CPU или CUDA | `cpu` |
 | `WHISPER_BEAM_SIZE` | Beam search ширина | `9` |
 | `WHISPER_NO_SPEECH_THRESHOLD` | Порог «тишины» (none = не пропускать) | `none` |
+| `WHISPER_VAD_FILTER` | Фильтр VAD | `false` |
+| `WHISPER_CONDITION_ON_PREVIOUS_TEXT` | Использовать предыдущий текст | `true` |
 
 Горяче слова (имена, термины, специфичная лексика) добавляются в
 `prompts.toml`, секция `[hotwords]`.
@@ -244,7 +247,7 @@ transcribator/
 
 Примеры запросов:
 
-> «Запусти полный пайплайн для `Занятие 2. Apache Kafka/part12.mp3`»
+> «Запусти полный пайплайн для `Занятие 2. Apache Kafka/lecture.mp4`»
 
 > «Только notes, для всего `source-mp3/`»
 
@@ -272,225 +275,7 @@ Ollama — обычно 1–3 минуты на файл (зависит от м
 - Параллельный запуск пайплайна на одном и том же файле не поддерживается —
   сервер возвращает `HTTP 409 Conflict`. Это by design: один процесс Flask
   = один активный subprocess `transcribe.py`.
-- Аплоад MP3 из браузера не реализован — кладите файлы в `source-mp3/`
-  вручную.
-- Редактирование промптов и `.env` делается в текстовом редакторе и подхватывается при следующем
-  запуске.
-
-## Лицензия
-
-MIT (или укажите свою).
- в браузере и сохранять их.
-- **Просмотр результатов** прямо в браузере: тексты и отрендеренный Markdown.
-- **Живые логи** обработки в реальном времени (Server-Sent Events).
-- **Работа из терминала** тоже возможна — один и тот же `transcribe.py` используется и GUI, и CLI.
-
-## Что вы получаете на выходе
-
-**`raw/*.txt`** — сырая расшифровка Whisper:
-```
-[00:00:00.000 -> 00:00:08.500] Добрый день, коллеги. Сегодня мы поговорим
-про архитектуру Apache Kafka и разберём, как она устроена изнутри.
-```
-
-**`clean/*.txt`** — отредактированный текст (пунктуация, абзацы, убраны слова-паразиты):
-```
-Добрый день, коллеги. Сегодня мы поговорим про архитектуру Apache Kafka
-и разберём, как она устроена изнутри.
-```
-
-**`notes/*.md`** — подробный учебный конспект (создаётся из raw):
-```markdown
-## Архитектура Kafka
-Преподаватель подробно разбирает механизм работы брокера... 
-Важный нюанс: партиции позволяют масштабировать чтение...
-```
-
-**`summary/*.md`** — структурированный итоговый материал (создаётся из clean):
-```markdown
-# Учебный конспект по Apache Kafka
-## Основная идея
-Apache Kafka — это open-source система для обмена сообщениями...
-```
-
-## Технологии
-
-| Компонент | Что используется |
-|---|---|
-| Backend | Python 3.11+, Flask |
-| Frontend | Vanilla JS SPA, HTML/CSS (без сборки и без зависимостей) |
-| STT | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — Whisper Large-v3, CPU, int8 |
-| LLM (clean/notes/summary) | Ollama: `llama3.1-clean-32k:latest`, `gemma4:e2b-32k` |
-| Markdown-рендер | Python `markdown` |
-| Конфиг | `python-dotenv` + `prompts.toml` |
-
-## Установка
-
-### 1. Системные требования
-
-- macOS / Linux
-- Python 3.11 или новее
-- ~10 ГБ свободного места (модели Whisper + Ollama)
-- [Ollama](https://ollama.com/download) запущена локально
-
-### 2. Клонирование и зависимости
-
-```bash
-git clone https://github.com/alexmagestik/transcribator.git
-cd transcribator
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp env.example .env
-```
-
-### 3. Загрузка моделей Ollama
-
-```bash
-ollama pull llama3.1-clean-32k:latest
-ollama pull gemma4:e2b-32k
-```
-
-Проверьте, что ollama отвечает:
-```bash
-curl http://127.0.0.1:11434/api/tags
-```
-
-### 4. Запуск веб-интерфейса
-
-```bash
-./.venv/bin/python app.py
-```
-
-Откройте в браузере: **http://127.0.0.1:11434**
-
-В UI вы увидите:
-
-- слева — дерево папок `source-mp3/` с бейджами `R / C / N / S`
-  (raw / clean / notes / summary) — зелёный = файл уже создан, серый = нет;
-- справа — вкладки `raw / clean / notes / summary` для просмотра и редактирования содержимого;
-- внизу — панель логов в реальном времени во время обработки.
-
-### 5. Запуск из терминала (CLI, без UI)
-
-```bash
-# Полный пайплайн на всю папку
-.venv/bin/python transcribe.py pipeline source-mp3
-
-# Только конкретный файл
-.venv/bin/python transcribe.py pipeline source-mp3/Лекция.mp3
-
-# Только один шаг — whisper / clean / notes / summary
-.venv/bin/python transcribe.py whisper source-mp3 --match "Part12"
-.venv/bin/python transcribe.py clean raw --match "Part12" --force
-.venv/bin/python transcribe.py notes raw --match "Part12"
-.venv/bin/python transcribe.py summary clean --match "Part12"
-```
-
-`--force` перезаписывает уже созданные артефакты. Без него — пропускает.
-
-## Структура проекта
-
-```
-transcribator/
-├── transcribe.py               # CLI пайплайна (whisper/clean/notes/summary/pipeline)
-├── app.py                      # Flask-сервер веб-интерфейса
-├── config.py                   # Settings + Prompts из .env / prompts.toml
-├── status.py                   # Трекинг активной задачи (.transcribe-status.json)
-├── prompts.toml                # Промпты для Ollama + список hotwords
-├── requirements.txt            # faster-whisper, flask, markdown, python-dotenv
-├── env.example                 # Шаблон .env (скопировать в .env)
-│
-├── source-mp3/                 # ← положите сюда ваши MP3
-├── raw/                        # ← Whisper-транскрипты (создаются)
-├── clean/                      # ← очищенные тексты (создаются)
-├── notes/                      # ← подробные конспекты (создаются)
-├── summary/                    # ← итоговые саммари (создаются)
-│
-├── templates/
-│   └── index.html              # Единственный файл UI (vanilla JS SPA)
-│
-└── .claude/
-    ├── agents/                 # Claude Code subagents (опционально)
-    │   ├── transcribe-pipeline.md
-    │   ├── transcribe-whisper.md
-    │   ├── transcribe-clean.md
-    │   ├── transcribe-notes.md
-    │   └── transcribe-summary.md
-    └── skills/                 # Claude Code skills (опционально)
-        ├── transcribe-pipeline/
-        ├── transcribe-whisper/
-        ├── transcribe-clean/
-        ├── transcribe-notes/
-        ├── transcribe-summary/
-        └── start-web-ui/       # Запуск Flask-сервера по запросу
-```
-
-Папки `raw/`, `clean/`, `notes/`, `summary/` и файлы создаются при первом запуске.
-Имена и пути — относительные к корню проекта (настраивается в `.env`).
-
-## Конфигурация
-
-Всё настраивается через `.env` (см. `env.example`):
-
-| Переменная | Что делает | По умолчанию |
-|---|---|---|
-| `SOURCE_DIR` | Папка с исходными MP3 | `source-mp3` |
-| `RAW_DIR` | Куда писать Whisper-транскрипты | `raw` |
-| `CLEAN_DIR` | Куда писать очищенный текст | `clean` |
-| `NOTES_DIR` | Куда писать подробные конспекты | `notes` |
-| `SUMMARY_DIR` | Куда писать саммари | `summary` |
-| `OLLAMA_HOST` | Адрес Ollama | `http://127.0.0.1:11434` |
-| `OLLAMA_CLEAN_MODEL` | Модель для шага clean | `llama3.1-clean-32k:latest` |
-| `OLLAMA_NOTES_MODEL` | Модель для шага notes | `gemma4:e2b-32k` |
-| `OLLAMA_SUMMARY_MODEL` | Модель для шага summary | `gemma4:e2b-32k` |
-| `WHISPER_MODEL` | Размер модели Whisper | `large-v3` |
-| `WHISPER_DEVICE` | CPU или CUDA | `cpu` |
-| `WHISPER_BEAM_SIZE` | Beam search ширина | `9` |
-| `WHISPER_NO_SPEECH_THRESHOLD` | Порог «тишины» (none = не пропускать) | `none` |
-
-Горяче слова (имена, термины, специфичная лексика) добавляются в
-`prompts.toml`, секция `[hotwords]`.
-
-## Использование через Claude Code (опционально)
-
-Если вы используете Claude Code, вы можете запускать обработку прямо из
-чата на естественном языке. В репозитории настроены:
-
-- **subagents** (`transcribe-pipeline`, `transcribe-whisper`, `transcribe-clean`,
-  `transcribe-notes`, `transcribe-summary`) — каждый отвечает за свой шаг;
-- **skills** (`start-web-ui` +4 транскриб-скилла) — обёртки с bash-скриптами.
-
-Примеры запросов:
-
-> «Запусти полный пайплайн для `Занятие 2. Apache Kafka/part12.mp3`»
-
-> «Только notes, для всего `source-mp3/`»
-
-> «Открой веб-интерфейс»
-
-> «Перезапусти clean с `--force` для всех файлов»
-
-Все они в итоге дёргают тот же `transcribe.py` через subprocess — никакой
-параллельной реализации нет.
-
-## Производительность
-
-Whisper Large-v3 на CPU с `int8` — примерно **10–20× от длительности аудио**.
-То есть час лекции = 10–20 минут обработки. Шаги clean, notes и summary через
-Ollama — обычно 1–3 минуты на файл (зависит от модели и длины).
-
-Чтобы ускорить:
-
-- запустите Whisper на GPU (`WHISPER_DEVICE=cuda` + `compute_type=float16`);
-- используйте более лёгкие модели Ollama;
-- запускайте пайплайн на нескольких файлах параллельно (разными процессами).
-
-## Известные ограничения
-
-- Параллельный запуск пайплайна на одном и том же файле не поддерживается —
-  сервер возвращает `HTTP 409 Conflict`. Это by design: один процесс Flask
-  = один активный subprocess `transcribe.py`.
-- Аплоад MP3 из браузера не реализован — кладите файлы в `source-mp3/`
+- Аплоад медиафайлов из браузера не реализован — кладите файлы в `source-mp3/`
   вручную.
 - Редактирование промптов и `.env` делается в текстовом редакторе и подхватывается при следующем
   запуске.
