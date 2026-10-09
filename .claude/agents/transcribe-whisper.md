@@ -2,7 +2,7 @@
 name: transcribe-whisper
 description: >-
   Субагент сырой транскрибации MP3 → raw.txt через локальную модель Whisper Large-v3
-  (faster-whisper, не ollama). Принимает файл, папку или весь source-mp3.
+  (faster-whisper, не ollama). Принимает файл, папку или весь source.
   Запускается через свой skill transcribe-whisper.
 tools: Bash, Read
 model: inherit
@@ -28,15 +28,15 @@ model: inherit
 2. **Понять входные данные.** Вход:
    - `--match "<фрагмент имени>"` — для фильтрации (надёжно для путей с пробелами),
    - или явный путь к MP3 / папке (но лучше всегда через `--match`),
-   - без фильтра = весь `source-mp3/`.
+   - без фильтра = весь `source/`.
 
 3. **Запустить через skill:**
    ```bash
-   .claude/skills/transcribe-whisper/scripts/run.sh whisper source-mp3 --match "<match>"
+   .claude/skills/transcribe-whisper/scripts/run.sh whisper source --match "<match>"
    ```
    или
    ```bash
-   .claude/skills/transcribe-whisper/scripts/run.sh whisper source-mp3
+   .claude/skills/transcribe-whisper/scripts/run.sh whisper source
    ```
 
 4. **Дождаться exit code 0.** Whisper Large-v3 на CPU может работать долго

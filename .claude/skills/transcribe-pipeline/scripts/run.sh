@@ -41,7 +41,7 @@ case "${1:-}" in
   *)
     echo "Главный субагент пайплайна не вызывает transcribe.py напрямую." >&2
     echo "Запускайте субагентов шагов:" >&2
-    echo "  .claude/skills/transcribe-whisper/scripts/run.sh whisper source-mp3 [--match ...]" >&2
+    echo "  .claude/skills/transcribe-whisper/scripts/run.sh whisper source [--match ...]" >&2
     echo "  .claude/skills/transcribe-clean/scripts/run.sh clean raw [--match ...]" >&2
     echo "  .claude/skills/transcribe-summary/scripts/run.sh summary clean [--match ...]" >&2
     echo "Или вызовите 'status' / 'list <type>' для справки." >&2

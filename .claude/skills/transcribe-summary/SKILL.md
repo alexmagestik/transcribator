@@ -33,7 +33,7 @@ description: >-
    ```bash
    .claude/skills/transcribe-summary/scripts/run.sh summary clean
    ```
-   Также поддерживается `raw/` и `source-mp3/` (маппится в `clean/.../*.txt`).
+   Также поддерживается `raw/` и `source/` (маппится в `clean/.../*.txt`).
 3. Дождаться exit code 0.
 4. Сообщить список созданных `summary/.../*.md`.
 

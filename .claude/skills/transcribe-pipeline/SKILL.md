@@ -2,7 +2,7 @@
 name: transcribe-pipeline
 description: >-
   Главный субагент пайплайна. Координирует запуск whisper/clean/summary
-  субагентов, обрабатывая файлы, папки или весь source-mp3/. Запускается
+  субагентов, обрабатывая файлы, папки или весь source/. Запускается
   пользователем через естественный язык.
 ---
 
@@ -15,7 +15,7 @@ Agent tool по их именам (`transcribe-whisper`, `transcribe-clean`, `tr
 ## Алгоритм
 
 1. **Понять запрос пользователя.** Что именно нужно обработать и какой шаг:
-   - файл, папка, весь `source-mp3`?
+   - файл, папка, весь `source`?
    - полный pipeline / только whisper / только clean / только summary / комбинация?
 
 2. **Сформулировать `--match`.** Всегда используй `--match "<фрагмент имени>"`
@@ -36,7 +36,7 @@ Agent tool по их именам (`transcribe-whisper`, `transcribe-clean`, `tr
 |--------|----------|
 | "запусти полный пайплайн для part12" | `transcribe-whisper` → `transcribe-clean` → `transcribe-summary` с `--match "part12"` |
 | "обработай только clean для Apache Kafka" | только `transcribe-clean` с `--match "Apache Kafka"` |
-| "пройди все mp3 в source-mp3" | 3 субагента, без `--match` |
+| "пройди все mp3 в source" | 3 субагента, без `--match` |
 | "перезапусти summary для всего" | только `transcribe-summary` с `--force` |
 
 ## Команды для проверки

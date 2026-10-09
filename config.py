@@ -92,7 +92,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
     supported_extensions = [e.strip().lower() for e in exts_raw.split(",") if e.strip()]
 
     return Settings(
-        source_dir=_env_path("SOURCE_DIR", "source-mp3"),
+        source_dir=_env_path("SOURCE_DIR", "source"),
         raw_dir=_env_path("RAW_DIR", "raw"),
         clean_dir=_env_path("CLEAN_DIR", "clean"),
         summary_dir=_env_path("SUMMARY_DIR", "summary"),

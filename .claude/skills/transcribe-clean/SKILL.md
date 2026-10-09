@@ -32,7 +32,7 @@ description: >-
    ```bash
    .claude/skills/transcribe-clean/scripts/run.sh clean raw
    ```
-   Также поддерживается `source-mp3/...` (тогда raw маппится автоматически).
+   Также поддерживается `source/...` (тогда raw маппится автоматически).
 3. Дождаться exit code 0. Модель 32k — может обрабатывать большие raw одним проходом.
 4. Сообщить список созданных `clean/.../*.txt`.
 
@@ -47,7 +47,7 @@ description: >-
 ## Параметры
 
 - `clean <path> [--match PATTERN] [--force]`
-  - `<path>` — `raw/.../*.txt`, `raw/`, `source-mp3/` (или подкаталог).
+  - `<path>` — `raw/.../*.txt`, `raw/`, `source/` (или подкаталог).
 - `list raw` / `list clean` — посмотреть файлы.
 
 Подробности: [reference.md](reference.md)

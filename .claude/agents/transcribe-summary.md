@@ -3,8 +3,8 @@ name: transcribe-summary
 description: >-
   Субагент третьего шага пайплайна: саммаризация clean.txt → summary.md через
   локальную модель Ollama (gemma4:e2b-32k или та, на которой запущен основной
-  пайплайн claude). Принимает clean-файл, clean-папку, raw/source-mp3 (mapping
-  в clean) или весь source-mp3.
+  пайплайн claude). Принимает clean-файл, clean-папку, raw/source (mapping
+  в clean) или весь source.
 tools: Bash, Read
 model: inherit
 ---
@@ -28,7 +28,7 @@ model: inherit
 2. **Понять вход.** Вход — любой из:
    - `clean/<path>.txt` (явный файл),
    - `clean/` (папка),
-   - `raw/` или `source-mp3/` (маппится в `clean/.../*.txt`),
+   - `raw/` или `source/` (маппится в `clean/.../*.txt`),
    - `--match "<фрагмент имени>"` для фильтрации.
 
 3. **Запустить через skill:**

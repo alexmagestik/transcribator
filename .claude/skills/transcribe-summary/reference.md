@@ -13,7 +13,7 @@
 .claude/skills/transcribe-summary/scripts/run.sh status
 ```
 
-`<path>` — `clean/.../*.txt`, `clean/`, `raw/`, `source-mp3/` или подкаталог.
+`<path>` — `clean/.../*.txt`, `clean/`, `raw/`, `source/` или подкаталог.
 
 ## Поведение
 

@@ -2,9 +2,9 @@
 name: transcribe-pipeline
 description: >-
   Главный субагент пайплайна транскрибации. Координирует запуск whisper/clean/summary
-  субагентов, обрабатывая файлы, папки или весь source-mp3/. Запускается пользователем
+  субагентов, обрабатывая файлы, папки или весь source/. Запускается пользователем
   через естественный язык ("запусти полный пайплайн для part12", "обработай все mp3",
-  "только clean для ./source-mp3/Apache Kafka" и т.п.).
+  "только clean для ./source/Apache Kafka" и т.п.).
 tools: Agent, Bash, Read
 model: inherit
 ---
@@ -21,7 +21,7 @@ model: inherit
 ## Контекст
 
 Рабочая директория: корень репозитория `transcribator/`. Внутри:
-- `source-mp3/` — исходные MP3 (с подкаталогами).
+- `source/` — исходные MP3 (с подкаталогами).
 - `raw/` — сырая транскрибация (Whisper).
 - `clean/` — очищенный текст (ollama).
 - `summary/` — саммаризация (ollama).
@@ -31,14 +31,14 @@ model: inherit
 ## Алгоритм
 
 1. **Понять запрос пользователя.** Разобрать:
-   - Что именно: файл, папка или весь `source-mp3`?
+   - Что именно: файл, папка или весь `source`?
    - Какой шаг: только `whisper`, только `clean`, только `summary` или полный pipeline?
 
 2. **Сформулировать аргументы CLI.** Всегда используй `--match "<фрагмент имени>"` —
    так надёжнее для путей с пробелами. Примеры:
-   - "запусти полный пайплайн для part12" → шаги `whisper,clean,summary`, target `source-mp3`, `--match "part12"`.
+   - "запусти полный пайплайн для part12" → шаги `whisper,clean,summary`, target `source`, `--match "part12"`.
    - "обработай только clean для Apache Kafka" → шаг `clean`, target `raw/`, `--match "Apache Kafka"`.
-   - "пройди все mp3" → шаги `whisper,clean,summary`, target `source-mp3`, без `--match`.
+   - "пройди все mp3" → шаги `whisper,clean,summary`, target `source`, без `--match`.
 
 3. **Запустить субагентов последовательно** через Agent tool:
    - Полный pipeline → сначала `transcribe-whisper`, затем `transcribe-clean`, затем `transcribe-summary`.

@@ -31,7 +31,7 @@ description: >-
    ```bash
    .claude/skills/transcribe-notes/scripts/run.sh notes raw
    ```
-   Также поддерживается `source-mp3/...` (тогда raw маппится автоматически).
+   Также поддерживается `source/...` (тогда raw маппится автоматически).
 3. Дождаться exit code 0. Текст обрабатывается чанками (с учётом промпта) для лимита 32k.
 4. Сообщить список созданных `notes/.../*.md`.
 
@@ -46,5 +46,5 @@ description: >-
 ## Параметры
 
 - `notes <path> [--match PATTERN] [--force]`
-  - `<path>` — `raw/.../*.txt`, `raw/`, `source-mp3/` (или подкаталог).
+  - `<path>` — `raw/.../*.txt`, `raw/`, `source/` (или подкаталог).
 - `list raw` / `list notes` — посмотреть файлы.

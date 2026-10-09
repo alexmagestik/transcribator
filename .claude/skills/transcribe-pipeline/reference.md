@@ -6,7 +6,7 @@
 субагентов шагов:
 
 ```
-source-mp3/*.mp3  →  raw/*.txt  →  clean/*.txt  →  summary/*.md
+source/*.mp3  →  raw/*.txt  →  clean/*.txt  →  summary/*.md
        ↓                  ↓                 ↓
 transcribe-whisper   transcribe-clean   transcribe-summary
 (faster-whisper)    (llama3.1-clean)   (gemma4:e2b-32k)

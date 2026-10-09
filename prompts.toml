@@ -131,7 +131,7 @@ Kafka Streams, Postgres, SLA, e-mail, VPS, MLOps, Confluence, DataOps,
 pooling, consumer, producer, worker, raw, protobuf, Grafana, topic, partition, 
 offset, consumer group, pooling, Write Ahead Log, WAL, CDC, SCD, recovery,
 null, DDL, Java, Oracle, JVM, snapshot, transaction, inmutable, MegreTree,
-ReplacingMergeTree, materialized view, asyncio
+ReplacingMergeTree, materialized view, asyncio, commit, postmortem
 
 Примеры исправлений:
 > пайтон → Python
@@ -154,6 +154,8 @@ ReplacingMergeTree, materialized view, asyncio
 > партишн → partition
 > офсет → offset
 > инмьютабл → inmutable
+> клик → Clickhouse
+
 
 
 Исправляй название технологии, если из контекста однозначно понятно, о какой технологии идёт речь.

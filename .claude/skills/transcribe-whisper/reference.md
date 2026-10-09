@@ -13,7 +13,7 @@
 .claude/skills/transcribe-whisper/scripts/run.sh status
 ```
 
-`<path>` — файл `.mp3`, папка или `source-mp3/` (по умолчанию).
+`<path>` — файл `.mp3`, папка или `source/` (по умолчанию).
 
 ## Поведение
 

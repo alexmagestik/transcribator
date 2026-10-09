@@ -205,7 +205,7 @@
   <div class="pane left">
     <div class="tree-toolbar">
       <input id="filter" type="text" placeholder="Фильтр (подстрока имени)…">
-      <button id="btn-run-all" class="primary" title="Прогнать полный pipeline на все source-mp3">▶ All</button>
+      <button id="btn-run-all" class="primary" title="Прогнать полный pipeline на все source">▶ All</button>
     </div>
     <div class="tree" id="tree"></div>
   </div>
@@ -383,7 +383,7 @@ function renderTree() {
   root.innerHTML = '';
   if (!state.tree) { root.innerHTML = '<div class="empty">Нет данных</div>'; return; }
   if (state.tree.missing) {
-    root.innerHTML = `<div class="empty">source-mp3 не найден: ${state.tree.name}</div>`;
+    root.innerHTML = `<div class="empty">source не найден: ${state.tree.name}</div>`;
     return;
   }
   const ul = document.createElement('ul');
@@ -492,9 +492,10 @@ function renderNode(node, isRoot) {
 
     const size = document.createElement('span');
     size.className = 'size';
-    const sizeMb = node.size_mb;
-    if (node.name.toLowerCase().endsWith('.mp3')) {
-      size.textContent = `${sizeMb.toFixed(2)} MB`;
+    const sizeMb = node.size;
+    const unit = node.size_unit || 'MB';
+    if (node.name.toLowerCase().endsWith('.mp3') || node.name.toLowerCase().endsWith('.mp4') || node.name.toLowerCase().endsWith('.mkv') || node.name.toLowerCase().endsWith('.mov') || node.name.toLowerCase().endsWith('.avi')) {
+      size.textContent = `${sizeMb.toFixed(2)} ${unit}`;
     } else {
       size.textContent = `${(sizeMb * 1024).toFixed(1)} KB`;
     }
@@ -686,10 +687,10 @@ function escapeHtml(s) {
 
 // ---------- Запуск ----------
 async function runOnNode(node, command) {
-  // node.rel задан относительно source-mp3 (корень дерева). Добавляем префикс,
+  // node.rel задан относительно source (корень дерева). Добавляем префикс,
   // чтобы transcribe.py (запущенный с cwd=BASE_DIR) нашёл путь.
   const isFile = node.type === 'file';
-  const pathWithPrefix = 'source-mp3/' + node.rel;
+  const pathWithPrefix = 'source/' + node.rel;
   const target = isFile ? pathWithPrefix : (pathWithPrefix.endsWith('/') ? pathWithPrefix : pathWithPrefix + '/');
   const body = {
     command,

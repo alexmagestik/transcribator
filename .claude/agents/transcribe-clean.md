@@ -3,7 +3,7 @@ name: transcribe-clean
 description: >-
   Субагент второго шага пайплайна: очистка raw.txt → clean.txt через локальную
   модель Ollama llama3.1-clean-32k:latest. Принимает raw-файл, raw-папку,
-  source-mp3 (mapping в raw) или весь source-mp3.
+  source (mapping в raw) или весь source.
 tools: Bash, Read
 model: inherit
 ---
@@ -28,7 +28,7 @@ model: inherit
 2. **Понять вход.** Вход — любой из:
    - `raw/<path>.txt` (явный файл),
    - `raw/` (папка),
-   - `source-mp3/` или подкаталог в нём (тогда транскрипт мапится в соответствующий
+   - `source/` или подкаталог в нём (тогда транскрипт мапится в соответствующий
      `raw/.../*.txt`),
    - `--match "<фрагмент имени>"` для фильтрации.
 

@@ -23,7 +23,7 @@
 Transcribator берёт папку с медиафайлами и создаёт набор артефактов по следующей схеме:
 
 ```
-source-mp3/.../Лекция.mp4
+source/.../Лекция.mp4
         ↓  Whisper Large-v3
 raw/.../Лекция.txt (Сырая расшифровка с таймкодами)
         ↙                 ↘
@@ -138,7 +138,7 @@ curl http://127.0.0.1:11434/api/tags
 
 В UI вы увидите:
 
-- слева — дерево папок `source-mp3/` с бейджами `R / C / N / S`
+- слева — дерево папок `source/` с бейджами `R / C / N / S`
   (raw / clean / notes / summary) — зелёный = файл уже создан, серый = нет;
 - справа — вкладки `raw / clean / notes / summary` для просмотра и редактирования содержимого;
 - внизу — панель логов в реальном времени во время обработки.
@@ -154,13 +154,13 @@ curl http://127.0.0.1:11434/api/tags
 
 ```bash
 # Полный пайплайн на всю папку
-.venv/bin/python transcribe.py pipeline source-mp3
+.venv/bin/python transcribe.py pipeline source
 
 # Только конкретный файл
-.venv/bin/python transcribe.py pipeline source-mp3/Лекция.mp4
+.venv/bin/python transcribe.py pipeline source/Лекция.mp4
 
 # Только один шаг — whisper / clean / notes / summary
-.venv/bin/python transcribe.py whisper source-mp3 --match "Part12"
+.venv/bin/python transcribe.py whisper source --match "Part12"
 .venv/bin/python transcribe.py clean raw --match "Part12" --force
 .venv/bin/python transcribe.py notes raw --match "Part12"
 .venv/bin/python transcribe.py summary clean --match "Part12"
@@ -181,7 +181,7 @@ transcribator/
 ├── requirements.txt            # faster-whisper, flask, markdown, python-dotenv, vkbottle, certifi
 ├── env.example                 # Шаблон .env (скопировать в .env)
 │
-├── source-mp3/                 # ← положите сюда ваши медиафайлы
+├── source/                 # ← положите сюда ваши медиафайлы
 ├── raw/                        # ← Whisper-транскрипты (создаются)
 ├── clean/                      # ← очищенные тексты (создаются)
 ├── notes/                      # ← подробные конспекты (создаются)
@@ -215,7 +215,7 @@ transcribator/
 
 | Переменная | Что делает | По умолчанию |
 |---|---|---|
-| `SOURCE_DIR` | Папка с исходными медиафайлами | `source-mp3` |
+| `SOURCE_DIR` | Папка с исходными медиафайлами | `source` |
 | `RAW_DIR` | Куда писать Whisper-транскрипты | `raw` |
 | `CLEAN_DIR` | Куда писать очищенный текст | `clean` |
 | `NOTES_DIR` | Куда писать подробные конспекты | `notes` |
@@ -249,7 +249,7 @@ transcribator/
 
 > «Запусти полный пайплайн для `Занятие 2. Apache Kafka/lecture.mp4`»
 
-> «Только notes, для всего `source-mp3/`»
+> «Только notes, для всего `source/`»
 
 > «Открой веб-интерфейс»
 
@@ -275,7 +275,7 @@ Ollama — обычно 1–3 минуты на файл (зависит от м
 - Параллельный запуск пайплайна на одном и том же файле не поддерживается —
   сервер возвращает `HTTP 409 Conflict`. Это by design: один процесс Flask
   = один активный subprocess `transcribe.py`.
-- Аплоад медиафайлов из браузера не реализован — кладите файлы в `source-mp3/`
+- Аплоад медиафайлов из браузера не реализован — кладите файлы в `source/`
   вручную.
 - Редактирование промптов и `.env` делается в текстовом редакторе и подхватывается при следующем
   запуске.

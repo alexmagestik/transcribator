@@ -2,7 +2,7 @@
 name: start-web-ui
 description: >-
   Запускает локальный Flask-сервер app.py — веб-интерфейс пайплайна
-  транскрибации (просмотр source-mp3/raw/clean/summary, запуск transcribe.py
+  транскрибации (просмотр source/raw/clean/summary, запуск transcribe.py
   через /api/run, SSE-логи). Запускается пользователем через естественный язык.
 ---
 

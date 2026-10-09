@@ -31,11 +31,11 @@ Ollama **не используется**.
    ```
 3. Запустить:
    ```bash
-   .claude/skills/transcribe-whisper/scripts/run.sh whisper source-mp3 --match "<фрагмент>"
+   .claude/skills/transcribe-whisper/scripts/run.sh whisper source --match "<фрагмент>"
    ```
    или для всех:
    ```bash
-   .claude/skills/transcribe-whisper/scripts/run.sh whisper source-mp3
+   .claude/skills/transcribe-whisper/scripts/run.sh whisper source
    ```
 4. Дождаться exit code 0. Whisper на CPU — медленный, не прерывать.
 5. Сообщить список созданных `raw/.../*.txt`.

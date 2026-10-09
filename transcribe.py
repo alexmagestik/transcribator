@@ -2,13 +2,13 @@
 """
 Пайплайн транскрибации:
 
-  source-mp3/*.mp3  →  raw/*.txt  →  clean/*.txt  →  summary/*.md
+  source/*.mp3  →  raw/*.txt  →  clean/*.txt  →  summary/*.md
        Whisper           Qwen clean        Qwen summary
 
 Запуск:
-  .venv/bin/python transcribe.py pipeline source-mp3/
-  .venv/bin/python transcribe.py pipeline source-mp3/lesson.mp3
-  .venv/bin/python transcribe.py whisper source-mp3/lesson.mp3
+  .venv/bin/python transcribe.py pipeline source/
+  .venv/bin/python transcribe.py pipeline source/lesson.mp3
+  .venv/bin/python transcribe.py whisper source/lesson.mp3
   .venv/bin/python transcribe.py clean raw/lesson.txt
   .venv/bin/python transcribe.py summary clean/lesson.txt
 """

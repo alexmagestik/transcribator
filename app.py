@@ -6,7 +6,7 @@
 Эндпоинты:
   GET  /                       - UI (templates/index.html)
   GET  /api/config             - пути source/raw/clean/summary
-  GET  /api/tree               - JSON-дерево source-mp3 с бейджами наличия
+  GET  /api/tree               - JSON-дерево source с бейджами наличия
   GET  /api/view?path&kind     - текст raw/clean или HTML-рендер summary
   GET  /api/status             - running + .transcribe-status.json
   POST /api/run                - запустить transcribe.py как subprocess
@@ -155,7 +155,8 @@ def _build_tree() -> dict[str, Any]:
                     "name": entry.name,
                     "rel": str(entry_rel),
                     "type": "file",
-                    "size_mb": round(entry.stat().st_size / (1024 * 1024), 2),
+                    "size": round(entry.stat().st_size / (1024 * 1024), 2),
+                    "size_unit": "MB",
                     "has_raw": bool(outs["raw"] and outs["raw"].exists()),
                     "has_clean": bool(outs["clean"] and outs["clean"].exists()),
                     "has_notes": bool(outs["notes"] and outs["notes"].exists()),
@@ -232,7 +233,7 @@ def api_run() -> Response:
         return jsonify({"error": "Не указан path"}), 400
 
     # Страховка: если путь относительный и не нашёлся в cwd, попробуем
-    # внутри source-mp3/ (фронтенд шлёт пути относительно source-mp3).
+    # внутри source/ (фронтенд шлёт пути относительно source).
     target_path = Path(target)
     if not target_path.is_absolute() and not target_path.exists():
         candidate = _settings.source_dir / target
@@ -422,7 +423,7 @@ def api_view() -> Response:
         return jsonify({"error": "Не указан path или mp3"}), 400
 
     if mp3_rel:
-        # Путь относительно source-mp3 (например, "Занятие 2. Apache Kafka/...part01.mp3")
+        # Путь относительно source (например, "Занятие 2. Apache Kafka/...part01.mp3")
         try:
             from transcribe import output_path_for_media  # noqa: PLC0415
         except Exception as exc:  # noqa: BLE001
